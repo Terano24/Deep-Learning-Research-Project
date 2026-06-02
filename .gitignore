@@ -5,7 +5,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Data Assets & Big Files (Local Only)
-Sets/
+data/raw/
 *.xlsx
 *.csv
 
