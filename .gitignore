@@ -1,0 +1,16 @@
+# Python Environment Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# Data Assets & Big Files (Local Only)
+Sets/
+*.xlsx
+*.csv
+
+# Model Checkpoints & Output Weights
+*.pth
+*.ckpt
+*.h5
+*.weights
