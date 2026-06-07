@@ -25,17 +25,7 @@ If you are using Visual Studio Code, you can instantly install all required libr
 
 *(Alternatively, run `pip install -r requirements.txt` directly in your terminal).*
 
-### 3. Add Missing Data & Weights
-The heavy files were ignored by Git. You must download them manually (from your Google Drive) and place them in the correct folders:
-
-1. **Model Weights**: 
-   - Download the `CNN_WEIGHT_OPSI` folder.
-   - Place it at: `models/CNN_WEIGHT_OPSI/`
-2. **Data Files**: 
-   - Download `after_pca.txt` and `ParatopeIMGTopsi.txt`.
-   - Place them at: `data/raw/` (if using `workflow.py`) or `data/` (if using `file_handlers.py`).
-
-### 4. Running the Model
+### 3. Running the Model
 Once everything is placed, you can run the model directly from the command line:
 
 **Single Mode (Test a specific Peptide + HLA pair):**
