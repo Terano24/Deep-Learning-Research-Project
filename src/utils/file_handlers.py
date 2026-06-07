@@ -28,7 +28,7 @@ def inference(peptide, mhc):
     input2_score = hla_iterate(dataset_score)
     label_score = label_index(dataset_score)
     scoring = cnn_model.predict(x=[input1_score,input2_score])
-    return float(scoring)
+    return float(scoring.item())
 
 def file_process(upload, download):
     after_pca = np.loadtxt(os.path.join(BASE_DIR, 'data/after_pca.txt'))
