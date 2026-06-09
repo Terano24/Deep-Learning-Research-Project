@@ -67,12 +67,12 @@ def recover_hla(hla, dic_inventory):
     big_category = dic_inventory[type_]
     if not big_category.get(first2) == None:
         small_category = big_category.get(first2)
-        distance = [abs(int(last2) - int(i)) for i in small_category]
+        distance = [abs(int(last2.replace(':', '')) - int(i.replace(':', ''))) for i in small_category]
         optimal = min(zip(small_category, distance), key=lambda x: x[1])[0]
         return 'HLA-' + str(type_) + '*' + str(first2) + str(optimal)
     else:
         small_category = list(big_category.keys())
-        distance = [abs(int(first2) - int(i)) for i in small_category]
+        distance = [abs(int(first2.replace(':', '')) - int(i.replace(':', ''))) for i in small_category]
         optimal = min(zip(small_category, distance), key=lambda x: x[1])[0]
         return 'HLA-' + str(type_) + '*' + str(optimal) + str(big_category[optimal][0])
 
