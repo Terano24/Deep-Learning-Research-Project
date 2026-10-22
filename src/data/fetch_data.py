@@ -65,10 +65,44 @@ def fetch_iedb_data(out_path=None):
     return df
 
 
+BINDING_SELECT = ','.join([
+    'linear_sequence', 'linear_sequence_length', 'mhc_restriction',
+    'qualitative_measure', 'quantitative_measure', 'assay_names',
+])
+BINDING_FILTERS = {
+    'mhc_class': 'eq.I',
+    'host_organism_iri': 'eq.NCBITaxon:9606',
+    'linear_sequence_length': 'in.(9,10)',
+    'mhc_restriction': 'like.HLA-*',
+    'qualitative_measure': 'not.is.null',
+}
+
+
+def fetch_iedb_binding_data(out_path=None):
+    """MHC binding / ligand-presentation assays, used to pretrain the encoder (transfer learning)."""
+    out_path = Path(out_path) if out_path else BASE_DIR / 'data' / 'raw' / 'iedb_mhc_binding.csv'
+    rows, offset = [], 0
+    while True:
+        params = dict(BINDING_FILTERS, select=BINDING_SELECT, order='structure_id,mhc_restriction',
+                      limit=PAGE_SIZE, offset=offset)
+        page = _get('https://query-api.iedb.org/mhc_search?' + urllib.parse.urlencode(params, safe='.,():*'))
+        rows.extend(page)
+        print('fetched', len(rows), flush=True)
+        if len(page) < PAGE_SIZE:
+            break
+        offset += PAGE_SIZE
+    df = pd.DataFrame(rows)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_path, index=False)
+    print('saved', len(df), 'rows to', out_path)
+    return df
+
+
 def fetch_imgt_data():
     """HLA pseudo-sequences are kept in data/raw/ParatopeIMGTopsi.txt."""
     pass
 
 
 if __name__ == '__main__':
-    fetch_iedb_data()
+    import sys
+    fetch_iedb_binding_data() if 'binding' in sys.argv else fetch_iedb_data()

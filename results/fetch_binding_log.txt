@@ -1,0 +1,10 @@
+fetched 10000
+fetched 20000
+fetched 30000
+fetched 40000
+fetched 50000
+fetched 60000
+fetched 70000
+fetched 80000
+fetched 90000
+fetched 100000
