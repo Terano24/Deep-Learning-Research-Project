@@ -1,0 +1,134 @@
+{
+  "n_test_pairs": 4641,
+  "models": [
+    "pocket_attention",
+    "cnn",
+    "gbm_baseline",
+    "allele_prior_baseline"
+  ],
+  "overall_auc": {
+    "pocket_attention": 0.813385335212609,
+    "cnn": 0.7916291776881046,
+    "gbm_baseline": 0.8103565046327581,
+    "allele_prior_baseline": 0.7517681497070604
+  },
+  "within_allele": {
+    "pocket_attention": {
+      "n_alleles": 17,
+      "n_pairs_covered": 4367,
+      "macro_auc": 0.7396355903631038,
+      "weighted_auc": 0.7346414594711058
+    },
+    "cnn": {
+      "n_alleles": 17,
+      "n_pairs_covered": 4367,
+      "macro_auc": 0.6799337290221255,
+      "weighted_auc": 0.6641615258547895
+    },
+    "gbm_baseline": {
+      "n_alleles": 17,
+      "n_pairs_covered": 4367,
+      "macro_auc": 0.7441760632828022,
+      "weighted_auc": 0.7266854229178743
+    },
+    "allele_prior_baseline": {
+      "n_alleles": 17,
+      "n_pairs_covered": 4367,
+      "macro_auc": 0.5,
+      "weighted_auc": 0.5
+    }
+  },
+  "per_allele_file": "results/per_allele_auc.csv",
+  "comparisons": {
+    "pocket_attention_vs_cnn_overall": {
+      "mean_diff": 0.021734992196666744,
+      "ci95": [
+        0.013694190659571514,
+        0.02955482582018607
+      ],
+      "p_gt_0": 1.0
+    },
+    "pocket_attention_vs_cnn_within_allele": {
+      "mean_diff": 0.07046272565685681,
+      "ci95": [
+        0.04855019944794693,
+        0.09142612920213566
+      ],
+      "p_gt_0": 1.0
+    },
+    "pocket_attention_vs_gbm_baseline_overall": {
+      "mean_diff": 0.002998723309022033,
+      "ci95": [
+        -0.0040139193918242,
+        0.009909136749523664
+      ],
+      "p_gt_0": 0.799
+    },
+    "pocket_attention_vs_gbm_baseline_within_allele": {
+      "mean_diff": 0.008074048639972369,
+      "ci95": [
+        -0.008926908743724548,
+        0.024991268389227664
+      ],
+      "p_gt_0": 0.8325
+    },
+    "pocket_attention_vs_allele_prior_baseline_overall": {
+      "mean_diff": 0.06168667338281822,
+      "ci95": [
+        0.05187920632200503,
+        0.07201690922087721
+      ],
+      "p_gt_0": 1.0
+    },
+    "pocket_attention_vs_allele_prior_baseline_within_allele": {
+      "mean_diff": 0.23477351408080552,
+      "ci95": [
+        0.2169691870015852,
+        0.2525598615517978
+      ],
+      "p_gt_0": 1.0
+    }
+  },
+  "by_length": {
+    "9": {
+      "pocket_attention": 0.8119587367118168,
+      "cnn": 0.7915157509903462,
+      "gbm_baseline": 0.8064226273675412,
+      "allele_prior_baseline": 0.7560499609679938,
+      "n": 3140
+    },
+    "10": {
+      "pocket_attention": 0.7950749507797197,
+      "cnn": 0.7716808411003188,
+      "gbm_baseline": 0.7937582138703002,
+      "allele_prior_baseline": 0.7270741753400102,
+      "n": 1501
+    }
+  },
+  "lung_within_allele": {
+    "pocket_attention": {
+      "n_alleles": 2,
+      "n_pairs_covered": 101,
+      "macro_auc": 0.6435180204410974,
+      "weighted_auc": 0.597909021671398
+    },
+    "cnn": {
+      "n_alleles": 2,
+      "n_pairs_covered": 101,
+      "macro_auc": 0.823076923076923,
+      "weighted_auc": 0.7267326732673266
+    },
+    "gbm_baseline": {
+      "n_alleles": 2,
+      "n_pairs_covered": 101,
+      "macro_auc": 0.8497041420118343,
+      "weighted_auc": 0.7678598629093678
+    },
+    "allele_prior_baseline": {
+      "n_alleles": 2,
+      "n_pairs_covered": 101,
+      "macro_auc": 0.5,
+      "weighted_auc": 0.5
+    }
+  }
+}

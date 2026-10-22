@@ -24,8 +24,10 @@ import pandas as pd
 import tensorflow as tf
 
 from src.data.dataset import OUT_PATH, HLA_PATH
+from src.data.features import get_features, FEATURE_COLS
 from src.models.pocket_attention import build_model, tokenize_peptide, tokenize_hla
 from src.models.train import metrics, bootstrap_auc
+from src.analysis.confounds import within_allele_auc
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BINDING_PATH = BASE_DIR / 'data' / 'raw' / 'iedb_mhc_binding.csv'
@@ -36,7 +38,12 @@ VARIANTS = {
     'scratch_lung': dict(pretrained=False, lung=True),
     'pretrained': dict(pretrained=True, lung=False),
     'pretrained_lung': dict(pretrained=True, lung=True),
+    'pretrained_feat': dict(pretrained=True, lung=False, feat=True),
+    'pretrained_lung_feat': dict(pretrained=True, lung=True, feat=True),
+    'scratch_lung_feat': dict(pretrained=False, lung=True, feat=True),
 }
+for _c in VARIANTS.values():
+    _c.setdefault('feat', False)
 
 
 def hla_table():
@@ -54,7 +61,10 @@ def load_dataset():
     df = pd.read_csv(OUT_PATH)
     pep, hla = tensors(df, hla_table())
     lung = df['lung_cancer'].values.astype('float32')[:, None]
-    return df, pep, hla, lung
+    # join on the peptide key: get_features returns one row per *unique* peptide
+    aux = df.join(get_features(df['peptide']), on='peptide')[FEATURE_COLS].astype('float32').values
+    assert not np.isnan(aux).any(), 'aux feature join left NaNs'
+    return df, pep, hla, lung, aux
 
 
 def load_binding(exclude_peptides):
@@ -95,12 +105,12 @@ def pretrain(args):
     model = build_model()
     compile_model(model, 'pretrain', 1e-3)
     z = np.zeros((len(y), 1), 'float32')
-    ds = lambda m: ([pep[m], hla[m], z[m]], {'binding': y[m], 'immunogenicity': np.zeros(m.sum(), 'float32')})
+    ds = lambda m: ([pep[m], hla[m], z[m], z[m]], {'binding': y[m], 'immunogenicity': np.zeros(m.sum(), 'float32')})
     hist = model.fit(*ds(~val), validation_data=ds(val), epochs=args.epochs, batch_size=256,
                      sample_weight={'binding': balanced_weights(y[~val]), 'immunogenicity': np.zeros((~val).sum(), 'float32')},
                      callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)],
                      verbose=2)
-    pv = model.predict([pep[val], hla[val], z[val]], batch_size=1024, verbose=0)[0].ravel()
+    pv = model.predict([pep[val], hla[val], z[val], z[val]], batch_size=1024, verbose=0)[0].ravel()
     from sklearn.metrics import roc_auc_score
     print('pretrain val AUC (binding):', round(roc_auc_score(y[val], pv), 4))
     PRETRAIN_DIR.mkdir(parents=True, exist_ok=True)
@@ -108,17 +118,24 @@ def pretrain(args):
 
 
 def fit_variant(variant, tr, va, data, seed, epochs=25):
-    df, pep, hla, lung = data
+    df, pep, hla, lung, aux = data
     cfg = VARIANTS[variant]
     tf.keras.utils.set_random_seed(seed)
-    model = build_model(use_lung_adapter=cfg['lung'])
+    n_aux = aux.shape[1] if cfg['feat'] else 0
+    model = build_model(use_lung_adapter=cfg['lung'], n_aux=n_aux)
     if cfg['pretrained']:
-        _load_pretrained(model, cfg['lung'])
+        _load_pretrained(model)
     compile_model(model, 'finetune', 3e-4 if cfg['pretrained'] else 1e-3)
     y = df['label'].values.astype('float32')
     lf = lung if cfg['lung'] else np.zeros_like(lung)
+    # standardise aux features with TRAINING-fold statistics only
+    if n_aux:
+        mu, sd = aux[tr].mean(0), aux[tr].std(0)
+        af = ((aux - mu) / np.where(sd > 0, sd, 1.0)).astype('float32')
+    else:
+        af = np.zeros((len(df), 1), 'float32')
     dummy = lambda m: np.zeros(m.sum(), 'float32')
-    xs = lambda m: [pep[m], hla[m], lf[m]]
+    xs = lambda m: [pep[m], hla[m], lf[m], af[m]]
     ys = lambda m: {'binding': dummy(m), 'immunogenicity': y[m]}
     kw = {}
     cb = []
@@ -128,24 +145,39 @@ def fit_variant(variant, tr, va, data, seed, epochs=25):
     hist = model.fit(xs(tr), ys(tr), epochs=epochs, batch_size=128, callbacks=cb, verbose=0,
                      sample_weight={'binding': dummy(tr), 'immunogenicity': balanced_weights(y[tr])}, **kw)
     best = int(np.argmin(hist.history['val_loss'])) + 1 if va is not None else epochs
-    return model, best, lf
+    return model, best, (lf, af)
 
 
-def _load_pretrained(model, lung_adapter):
-    """Copy pretrained weights into the fine-tune model (the lung adapter stays zero-initialised)."""
-    src = build_model(use_lung_adapter=False)
+def _load_pretrained(model):
+    """Copy pretrained weights by layer name. Layers absent from the pretrained graph
+    (the lung adapter, the aux projection) and any whose shape changed (the trunk, when
+    aux features widen its input) keep their fresh initialisation."""
+    src = build_model(use_lung_adapter=False, n_aux=0)
     src.load_weights(str(PRETRAIN_DIR / 'weights'))
-    # same architecture -> match weighted layers by position, with class/shape checks
-    s = [l for l in src.layers if l.weights]
-    t = [l for l in model.layers if l.weights and l.name != 'imm_lung_adapter']
-    for a, b_ in zip(s, t):
-        if a.__class__ is b_.__class__ and [w.shape for w in a.weights] == [w.shape for w in b_.weights]:
-            b_.set_weights(a.get_weights())
+    copied, skipped = 0, []
+    for layer in src.layers:
+        if not layer.weights:
+            continue
+        try:
+            target = model.get_layer(layer.name)
+        except ValueError:
+            skipped.append(layer.name)
+            continue
+        if [w.shape for w in target.weights] == [w.shape for w in layer.weights]:
+            target.set_weights(layer.get_weights())
+            copied += 1
+        else:
+            skipped.append(layer.name)
+    if copied == 0:
+        raise RuntimeError('pretrained transfer copied nothing -- layer names changed?')
+    return copied, skipped
 
 
-def predict(model, data, mask, lf):
-    df, pep, hla, lung = data
-    return model.predict([pep[mask], hla[mask], lf[mask]], batch_size=512, verbose=0)[1].ravel()
+def predict(model, data, mask, lfaf):
+    df, pep, hla, lung, aux = data
+    lf, af = lfaf
+    return model.predict([pep[mask], hla[mask], lf[mask], af[mask]],
+                         batch_size=512, verbose=0)[1].ravel()
 
 
 def cv(args):
@@ -166,20 +198,24 @@ def cv(args):
             print(f'{v:>16} fold {k}: AUC {m["auc"]:.3f} PR {m["pr_auc"]:.3f} MCC {m["mcc"]:.3f} ep {best}', flush=True)
         done = ~np.isnan(oof)
         lung = df['lung_cancer'].values
+        scored = df[done][['peptide', 'HLA', 'label', 'lung_cancer']].copy()
+        scored['score'] = oof[done]
+        _, wa = within_allele_auc(scored, 'score')
         res = {'cv_auc_mean': float(np.mean(fold_auc)), 'cv_auc_std': float(np.std(fold_auc)),
                'all': metrics(df['label'].values[done], oof[done]),
-               'lung': metrics(df['label'].values[done & lung], oof[done & lung]), 'best_epochs': best_eps}
+               'lung': metrics(df['label'].values[done & lung], oof[done & lung]),
+               'within_allele': wa, 'best_epochs': best_eps}
         out[v] = res
-        print(f'== {v}: AUC {res["cv_auc_mean"]:.3f}±{res["cv_auc_std"]:.3f} | pooled lung AUC '
+        print(f'== {v}: AUC {res["cv_auc_mean"]:.3f}±{res["cv_auc_std"]:.3f} | within-allele '
+              f'{wa.get("weighted_auc", float("nan")):.3f} | pooled lung AUC '
               f'{res["lung"]["auc"]:.3f} (n={res["lung"]["n"]}, pos={res["lung"]["n_pos"]})', flush=True)
-        pd.DataFrame({'oof': oof[done], 'label': df['label'].values[done], 'lung': lung[done]}).to_csv(
-            RESULTS / f'cv_oof_{v}.csv', index=False)
+        scored.to_csv(RESULTS / f'cv_oof_{v}.csv', index=False)
     (RESULTS / f'improve_cv_{"_".join(args.variants)}_f{args.folds}.json').write_text(json.dumps(out, indent=2))
 
 
 def final(args):
     data = load_dataset()
-    df, pep, hla, lung = data
+    df, pep, hla, lung, aux = data
     train = (df['split'] == 'train').values
     test = (df['split'] == 'test').values
     v = args.variant

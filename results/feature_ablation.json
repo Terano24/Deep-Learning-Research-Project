@@ -1,0 +1,36 @@
+{
+  "encoding_only": {
+    "overall_auc": 0.8082293581865586,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 26544,
+      "macro_auc": 0.6241705450117129,
+      "weighted_auc": 0.7049922008884791
+    },
+    "lung_auc_pooled": 0.5617924818506214,
+    "n_features": 121
+  },
+  "features_only": {
+    "overall_auc": 0.6534959562217736,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 26544,
+      "macro_auc": 0.5213558789100722,
+      "weighted_auc": 0.5774542857185849
+    },
+    "lung_auc_pooled": 0.6105843177064108,
+    "n_features": 9
+  },
+  "encoding_plus_features": {
+    "overall_auc": 0.8277639913895312,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 26544,
+      "macro_auc": 0.7116787330547653,
+      "weighted_auc": 0.738587779617844
+    },
+    "lung_auc_pooled": 0.6094192198843362,
+    "n_features": 130
+  },
+  "within_allele_gain": 0.03359557872936492
+}

@@ -1,0 +1,43 @@
+{
+  "n_pairs": 31274,
+  "n_studies": 1365,
+  "random": {
+    "overall_auc": 0.8399070406742348,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 31171,
+      "macro_auc": 0.7489194155246186,
+      "weighted_auc": 0.7680316252957415
+    },
+    "lung_auc": 0.6167933065824298
+  },
+  "peptide": {
+    "overall_auc": 0.825955286803855,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 31171,
+      "macro_auc": 0.7141478862883733,
+      "weighted_auc": 0.7395253634727902
+    },
+    "lung_auc": 0.5871894476223001
+  },
+  "study": {
+    "overall_auc": 0.6074938029321071,
+    "within_allele": {
+      "n_alleles": 31,
+      "n_pairs_covered": 31171,
+      "macro_auc": 0.42189074341775984,
+      "weighted_auc": 0.4346761252436283
+    },
+    "lung_auc": 0.49284982498079055
+  },
+  "random_minus_study": {
+    "overall": 0.23241323774212774,
+    "within_allele": 0.33335550005211323
+  },
+  "lung_study_concentration": {
+    "n_records": 1743,
+    "n_studies": 55,
+    "top3_share": 0.5903614457831325
+  }
+}

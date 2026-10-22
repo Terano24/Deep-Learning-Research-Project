@@ -43,18 +43,21 @@ class PositionIds(layers.Layer):
 def _embed(tokens, length, d, name):
     tok = layers.Embedding(len(AMINO), d, name=f'{name}_tok')(tokens)
     pos = layers.Embedding(length, d, name=f'{name}_pos')(PositionIds()(tokens))
-    return layers.LayerNormalization()(tok + pos)
+    return layers.LayerNormalization(name=f'{name}_ln')(tok + pos)
 
 
 def _attend(q, kv, d, heads, name, dropout):
     a = layers.MultiHeadAttention(heads, d // heads, dropout=dropout, name=name)(q, kv)
-    return layers.LayerNormalization()(q + a)
+    return layers.LayerNormalization(name=f'{name}_ln')(q + a)
 
 
-def build_model(d=32, heads=4, trunk=128, dropout=0.2, use_lung_adapter=True):
+def build_model(d=32, heads=4, trunk=128, dropout=0.2, use_lung_adapter=True, n_aux=0):
+    """n_aux > 0 adds a standardised biochemical / self-similarity feature vector
+    (see src/data/features.py) that is concatenated into the shared trunk."""
     pep = layers.Input(shape=(PEP_LEN,), dtype='int32', name='peptide')
     hla = layers.Input(shape=(HLA_LEN,), dtype='int32', name='hla')
     lung = layers.Input(shape=(1,), dtype='float32', name='lung_flag')
+    aux = layers.Input(shape=(max(n_aux, 1),), dtype='float32', name='aux')
 
     p = _embed(pep, PEP_LEN, d, 'pep')
     h = _embed(hla, HLA_LEN, d, 'hla')
@@ -63,8 +66,11 @@ def build_model(d=32, heads=4, trunk=128, dropout=0.2, use_lung_adapter=True):
     p2 = _attend(p, h, d, heads, 'pep_to_hla', dropout)   # peptide positions query the pocket
     h2 = _attend(h, p, d, heads, 'hla_to_pep', dropout)   # pocket residues query the peptide
 
-    z = layers.Concatenate()([layers.Flatten()(p2), layers.GlobalAveragePooling1D()(h2)])
-    z = layers.Dense(trunk, activation='relu')(z)
+    parts = [layers.Flatten()(p2), layers.GlobalAveragePooling1D()(h2)]
+    if n_aux:
+        parts.append(layers.Dense(16, activation='relu', name='aux_proj')(aux))
+    z = layers.Concatenate()(parts) if len(parts) > 1 else parts[0]
+    z = layers.Dense(trunk, activation='relu', name='trunk')(z)
     z = layers.Dropout(dropout)(z)
 
     binding = layers.Dense(1, activation='sigmoid', name='binding')(z)
@@ -73,4 +79,4 @@ def build_model(d=32, heads=4, trunk=128, dropout=0.2, use_lung_adapter=True):
         adapter = layers.Dense(1, name='imm_lung_adapter', kernel_initializer='zeros')(z)
         logit = logit + lung * adapter
     imm = layers.Activation('sigmoid', name='immunogenicity')(logit)
-    return tf.keras.Model([pep, hla, lung], [binding, imm])
+    return tf.keras.Model([pep, hla, lung, aux], [binding, imm])

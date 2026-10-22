@@ -42,28 +42,41 @@ def clean(raw_path=RAW_PATH, hla_path=HLA_PATH):
         n_records=('label', 'size'),
         pos_frac=('label', 'mean'),
         lung_cancer=('lung_cancer', 'any'),
+        # the publication contributing most records for this pair, kept so we can also
+        # split by study: IEDB records cluster heavily by reference (shared cohorts,
+        # cell lines and protocols), which peptide-level splitting does not separate
+        reference_id=('reference_id', lambda s: s.mode().iat[0] if not s.mode().empty else -1),
+        n_references=('reference_id', 'nunique'),
     ).reset_index()
     stats['unique_pairs'] = len(grouped)
     grouped = grouped[grouped['pos_frac'] != 0.5]
     stats['pairs_after_tie_drop'] = len(grouped)
     grouped['label'] = (grouped['pos_frac'] > 0.5).astype(int)
     grouped = grouped.rename(columns={'linear_sequence': 'peptide'})
-    return grouped[['peptide', 'HLA', 'label', 'lung_cancer', 'n_records']], stats
+    return grouped[['peptide', 'HLA', 'label', 'lung_cancer', 'n_records',
+                    'reference_id', 'n_references']], stats
 
 
 def assign_splits(df, seed=SEED):
-    """test = peptide-grouped hold-out; fold = peptide-grouped CV fold within the rest."""
-    groups = df['peptide'].values
-    gss = GroupShuffleSplit(n_splits=1, test_size=TEST_FRACTION, random_state=seed)
-    train_idx, test_idx = next(gss.split(df, groups=groups))
+    """Two independent split schemes, both held in the same table.
+
+    split/fold        grouped by peptide -- the headline evaluation
+    study_split/fold  grouped by source publication -- the stricter check, since
+                      records from one paper share cohorts, cell lines and protocols
+    """
     df = df.copy()
-    df['split'] = 'train'
-    df.iloc[test_idx, df.columns.get_loc('split')] = 'test'
-    df['fold'] = -1
-    train = df[df['split'] == 'train']
-    gkf = GroupKFold(n_splits=N_FOLDS)
-    for k, (_, val_idx) in enumerate(gkf.split(train, groups=train['peptide'].values)):
-        df.loc[train.index[val_idx], 'fold'] = k
+    for prefix, key in [('', 'peptide'), ('study_', 'reference_id')]:
+        groups = df[key].values
+        gss = GroupShuffleSplit(n_splits=1, test_size=TEST_FRACTION, random_state=seed)
+        _, test_idx = next(gss.split(df, groups=groups))
+        scol, fcol = f'{prefix}split', f'{prefix}fold'
+        df[scol] = 'train'
+        df.iloc[test_idx, df.columns.get_loc(scol)] = 'test'
+        df[fcol] = -1
+        train = df[df[scol] == 'train']
+        gkf = GroupKFold(n_splits=N_FOLDS)
+        for k, (_, val_idx) in enumerate(gkf.split(train, groups=train[key].values)):
+            df.loc[train.index[val_idx], fcol] = k
     return df
 
 

@@ -1,0 +1,41 @@
+{
+  "n_held_out_pairs": 1999,
+  "within_study": {
+    "n_groups": 16,
+    "n_pairs": 1132,
+    "ranker_macro": 0.5530453784061797,
+    "pointwise_macro": 0.49610116609701727,
+    "ranker_weighted": 0.5610659939335607,
+    "pointwise_weighted": 0.5089115286918633,
+    "ranker_groups_above_chance": 0.75,
+    "pointwise_groups_above_chance": 0.5,
+    "bootstrap": {
+      "mean_diff": 0.051345257321572246,
+      "ci95": [
+        -0.0313397183901822,
+        0.1419503287699571
+      ],
+      "p_gt_0": 0.8835
+    }
+  },
+  "within_study_and_allele": {
+    "n_groups": 10,
+    "n_pairs": 457,
+    "ranker_macro": 0.6014098240669878,
+    "pointwise_macro": 0.4515021105573006,
+    "ranker_weighted": 0.6224440470956653,
+    "pointwise_weighted": 0.4710354623345525,
+    "ranker_groups_above_chance": 0.9,
+    "pointwise_groups_above_chance": 0.4,
+    "bootstrap": {
+      "mean_diff": 0.14592901033420627,
+      "ci95": [
+        0.04960352183572518,
+        0.24477096260245104
+      ],
+      "p_gt_0": 0.9975
+    }
+  },
+  "ranker_pooled_auc": 0.6169376987133997,
+  "pointwise_pooled_auc": 0.5811171652293148
+}
