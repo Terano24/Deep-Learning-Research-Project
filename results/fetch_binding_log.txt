@@ -17,3 +17,25 @@ fetched 160000
 fetched 170000
 fetched 180000
 fetched 190000
+fetched 200000
+fetched 210000
+fetched 220000
+fetched 230000
+fetched 240000
+fetched 250000
+fetched 260000
+fetched 270000
+fetched 280000
+fetched 290000
+fetched 300000
+fetched 310000
+fetched 320000
+fetched 330000
+fetched 340000
+fetched 350000
+fetched 360000
+fetched 370000
+fetched 380000
+fetched 390000
+fetched 400000
+saved 400000 rows to C:\Users\Terano\OneDrive\Documents\CNN Lung Cancer\Deep-Learning-Research-Project\data\raw\iedb_mhc_binding.csv

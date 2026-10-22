@@ -1,0 +1,43 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1792680661.630656   42012 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1792680666.154210   42012 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:From C:\Users\Terano\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+binding pretrain pairs: 108567 positive rate 0.615
+WARNING:tensorflow:From C:\Users\Terano\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\tf_keras\src\backend.py:1400: The name tf.executing_eagerly_outside_functions is deprecated. Please use tf.compat.v1.executing_eagerly_outside_functions instead.
+
+I0000 00:00:1792680677.492422   42012 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+WARNING:tensorflow:From C:\Users\Terano\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\tf_keras\src\layers\normalization\layer_normalization.py:328: The name tf.nn.fused_batch_norm is deprecated. Please use tf.compat.v1.nn.fused_batch_norm instead.
+
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+Epoch 1/12
+WARNING:tensorflow:From C:\Users\Terano\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\tf_keras\src\engine\base_layer_utils.py:384: The name tf.executing_eagerly_outside_functions is deprecated. Please use tf.compat.v1.executing_eagerly_outside_functions instead.
+
+WARNING:tensorflow:From C:\Users\Terano\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\tf_keras\src\utils\tf_utils.py:492: The name tf.ragged.RaggedTensorValue is deprecated. Please use tf.compat.v1.ragged.RaggedTensorValue instead.
+
+403/403 - 55s - loss: 0.4153 - binding_loss: 0.4153 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.3983 - val_binding_loss: 0.3983 - val_immunogenicity_loss: 1.1706 - 55s/epoch - 136ms/step
+Epoch 2/12
+403/403 - 43s - loss: 0.2919 - binding_loss: 0.2919 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.3279 - val_binding_loss: 0.3279 - val_immunogenicity_loss: 1.1345 - 43s/epoch - 107ms/step
+Epoch 3/12
+403/403 - 43s - loss: 0.2598 - binding_loss: 0.2598 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.3127 - val_binding_loss: 0.3127 - val_immunogenicity_loss: 1.1065 - 43s/epoch - 107ms/step
+Epoch 4/12
+403/403 - 44s - loss: 0.2421 - binding_loss: 0.2421 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.3013 - val_binding_loss: 0.3013 - val_immunogenicity_loss: 1.2937 - 44s/epoch - 108ms/step
+Epoch 5/12
+403/403 - 43s - loss: 0.2311 - binding_loss: 0.2311 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2867 - val_binding_loss: 0.2867 - val_immunogenicity_loss: 1.2600 - 43s/epoch - 106ms/step
+Epoch 6/12
+403/403 - 44s - loss: 0.2218 - binding_loss: 0.2218 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2874 - val_binding_loss: 0.2874 - val_immunogenicity_loss: 1.2444 - 44s/epoch - 109ms/step
+Epoch 7/12
+403/403 - 41s - loss: 0.2137 - binding_loss: 0.2137 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2737 - val_binding_loss: 0.2737 - val_immunogenicity_loss: 1.1864 - 41s/epoch - 102ms/step
+Epoch 8/12
+403/403 - 42s - loss: 0.2067 - binding_loss: 0.2067 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2741 - val_binding_loss: 0.2741 - val_immunogenicity_loss: 1.3630 - 42s/epoch - 103ms/step
+Epoch 9/12
+403/403 - 46s - loss: 0.2017 - binding_loss: 0.2017 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2736 - val_binding_loss: 0.2736 - val_immunogenicity_loss: 1.2976 - 46s/epoch - 114ms/step
+Epoch 10/12
+403/403 - 55s - loss: 0.1970 - binding_loss: 0.1970 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2687 - val_binding_loss: 0.2687 - val_immunogenicity_loss: 1.1314 - 55s/epoch - 136ms/step
+Epoch 11/12
+403/403 - 46s - loss: 0.1911 - binding_loss: 0.1911 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2724 - val_binding_loss: 0.2724 - val_immunogenicity_loss: 1.1538 - 46s/epoch - 115ms/step
+Epoch 12/12
+403/403 - 46s - loss: 0.1857 - binding_loss: 0.1857 - immunogenicity_loss: 0.0000e+00 - val_loss: 0.2603 - val_binding_loss: 0.2603 - val_immunogenicity_loss: 1.1787 - 46s/epoch - 115ms/step
+pretrain val AUC (binding): 0.9577
