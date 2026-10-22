@@ -31,15 +31,15 @@ FILTERS = {
 }
 
 
-def _get(url, retries=4):
+def _get(url, retries=4, timeout=120):
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(url, timeout=120) as resp:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:
                 return json.load(resp)
         except Exception:
             if attempt == retries - 1:
                 raise
-            time.sleep(2 ** attempt)
+            time.sleep(min(2 ** attempt, 30))
 
 
 def fetch_iedb_data(out_path=None):
@@ -78,24 +78,34 @@ BINDING_FILTERS = {
 }
 
 
-def fetch_iedb_binding_data(out_path=None):
-    """MHC binding / ligand-presentation assays, used to pretrain the encoder (transfer learning)."""
+def fetch_iedb_binding_data(out_path=None, max_rows=400000):
+    """MHC binding / ligand-presentation assays, used to pretrain the encoder (transfer learning).
+
+    Each page is appended to the CSV as it arrives, so an interrupted run resumes where it stopped.
+    """
     out_path = Path(out_path) if out_path else BASE_DIR / 'data' / 'raw' / 'iedb_mhc_binding.csv'
-    rows, offset = [], 0
-    while True:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    offset = 0
+    if out_path.exists():
+        offset = sum(1 for _ in open(out_path, encoding='utf-8')) - 1
+        offset = (offset // PAGE_SIZE) * PAGE_SIZE      # drop a possibly half-written page below
+        keep = pd.read_csv(out_path).iloc[:offset]
+        keep.to_csv(out_path, index=False)
+        print('resuming at', offset, flush=True)
+    while offset < max_rows:
         params = dict(BINDING_FILTERS, select=BINDING_SELECT, order='structure_id,mhc_restriction',
                       limit=PAGE_SIZE, offset=offset)
-        page = _get('https://query-api.iedb.org/mhc_search?' + urllib.parse.urlencode(params, safe='.,():*'))
-        rows.extend(page)
-        print('fetched', len(rows), flush=True)
+        page = _get('https://query-api.iedb.org/mhc_search?' + urllib.parse.urlencode(params, safe='.,():*'),
+                    retries=8, timeout=300)
+        if not page:
+            break
+        pd.DataFrame(page)[BINDING_SELECT.split(',')].to_csv(
+            out_path, mode='a', header=not out_path.exists() or offset == 0, index=False)
+        offset += len(page)
+        print('fetched', offset, flush=True)
         if len(page) < PAGE_SIZE:
             break
-        offset += PAGE_SIZE
-    df = pd.DataFrame(rows)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out_path, index=False)
-    print('saved', len(df), 'rows to', out_path)
-    return df
+    print('saved', offset, 'rows to', out_path)
 
 
 def fetch_imgt_data():
