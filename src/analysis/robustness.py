@@ -44,6 +44,9 @@ SEED = 42
 MIN_GROUP = 10          # lower than the earlier 20, to widen the evaluation base
 SCHEMES = ['pointwise', 'pointwise_drop_dominant', 'pointwise_study_weighted',
            'pointwise_mixed_only', 'ranking']
+# '_nofeat' suffix: identical training, but the biochemical/self-similarity feature
+# vector is withheld. Used to test whether the feature gain survives study-grouped
+# evaluation or was a study artifact (see src/analysis/what_survives.py).
 
 
 def standardise(aux, fit_mask):
@@ -65,6 +68,9 @@ def train_pointwise(scheme, df, data, fit, val, af, lf, epochs=25):
     y = df['label'].values.astype('float32')
     dominant = df['reference_id'].value_counts().idxmax()
 
+    use_feat = not scheme.endswith('_nofeat')
+    scheme = scheme.replace('_nofeat', '')
+
     use = fit.copy()
     if scheme == 'pointwise_drop_dominant':
         use &= (df['reference_id'] != dominant).values
@@ -82,7 +88,10 @@ def train_pointwise(scheme, df, data, fit, val, af, lf, epochs=25):
         w = w * (sw / sw.mean())
 
     tf.keras.utils.set_random_seed(SEED)
-    model = build_model(use_lung_adapter=True, n_aux=aux.shape[1])
+    n_aux = aux.shape[1] if use_feat else 0
+    if not use_feat:
+        af = np.zeros((len(df), 1), 'float32')
+    model = build_model(use_lung_adapter=True, n_aux=n_aux)
     _load_pretrained(model)
     compile_model(model, 'finetune', 3e-4)
     dummy = lambda m: np.zeros(int(m.sum()), 'float32')
@@ -96,14 +105,18 @@ def train_pointwise(scheme, df, data, fit, val, af, lf, epochs=25):
     return lambda mask: model.predict(xs(mask), batch_size=512, verbose=0)[1].ravel()
 
 
-def train_ranking(df, data, fit, val, af, lf, rng, pairs_per_group=800, epochs=15):
+def train_ranking(df, data, fit, val, af, lf, rng, pairs_per_group=800, epochs=15,
+                  use_feat=True):
     _, pep, hla, _, aux = data
+    n_aux = aux.shape[1] if use_feat else 0
+    if not use_feat:
+        af = np.zeros((len(df), 1), 'float32')
     tr_p, tr_n = sample_pairs(df, fit, rng, pairs_per_group)
     va_p, va_n = sample_pairs(df, val, rng, pairs_per_group)
     if len(tr_p) == 0:
         return None
     tf.keras.utils.set_random_seed(SEED)
-    scorer = build_scorer(aux.shape[1], use_lung_adapter=True, pretrained=True)
+    scorer = build_scorer(n_aux, use_lung_adapter=True, pretrained=True)
     ranker = build_ranker(scorer)
     ranker.compile(optimizer=tf.keras.optimizers.Adam(3e-4), loss='binary_crossentropy')
     at = lambda rows: [pep[rows], hla[rows], lf[rows], af[rows]]
@@ -158,8 +171,9 @@ def main(args):
             if val.sum() == 0 or len(set(df['label'].values[val])) < 2:
                 fit, val = train_mask, train_mask
             af = standardise(aux, fit)
-            if scheme == 'ranking':
-                predict = train_ranking(df, data, fit, val, af, lf, rng)
+            if scheme.startswith('ranking'):
+                predict = train_ranking(df, data, fit, val, af, lf, rng,
+                                        use_feat=not scheme.endswith('_nofeat'))
             else:
                 predict = train_pointwise(scheme, df, data, fit, val, af, lf)
             if predict is None:

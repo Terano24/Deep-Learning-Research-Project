@@ -1,0 +1,25 @@
+{
+  "within_study": {
+    "n_groups": 171,
+    "with_features": 0.5371872463762406,
+    "without_features": 0.5329289412886483,
+    "gain": 0.004622584661693254,
+    "ci95": [
+      -0.01475592806994195,
+      0.023619250214088203
+    ],
+    "significant": false
+  },
+  "within_study_and_allele": {
+    "n_groups": 205,
+    "with_features": 0.5315076687886289,
+    "without_features": 0.5384613281233098,
+    "gain": -0.00706628557646953,
+    "ci95": [
+      -0.02606532618942961,
+      0.01147687273513289
+    ],
+    "significant": false
+  },
+  "note": "feature_ablation.py reported +0.034 within-allele on peptide-grouped folds; this script re-tests that under study-grouped evaluation"
+}

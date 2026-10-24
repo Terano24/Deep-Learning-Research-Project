@@ -1,0 +1,35 @@
+{
+  "pretrained": true,
+  "pretrain_n": 150000,
+  "pooled_auc": 0.6155627812682615,
+  "within_allele": {
+    "n_alleles": 35,
+    "n_pairs_covered": 31245,
+    "macro_auc": 0.36990407031669903,
+    "weighted_auc": 0.4051155330090839
+  },
+  "within_study": {
+    "n_groups": 171,
+    "n_pairs": 12652,
+    "macro_auc": 0.5480952099150413,
+    "weighted_auc": 0.5607528214024783,
+    "frac_groups_above_chance": 0.6023391812865497
+  },
+  "within_study_and_allele": {
+    "n_groups": 205,
+    "n_pairs": 9094,
+    "macro_auc": 0.5441613402991063,
+    "weighted_auc": 0.5580481917029861,
+    "frac_groups_above_chance": 0.6439024390243903
+  },
+  "cnn_minus_attention": {
+    "n_groups": 205,
+    "cnn": 0.5441613402991063,
+    "attention": 0.5315076687886289,
+    "diff": 0.012849378427167815,
+    "ci95": [
+      -0.01732213464806179,
+      0.04251467362592793
+    ]
+  }
+}

@@ -125,5 +125,55 @@
       "weighted_auc": 0.5655277289223972,
       "frac_groups_above_chance": 0.6048780487804878
     }
+  },
+  "pointwise_nofeat": {
+    "n_scored": 31274,
+    "pooled_auc": 0.6515129473171741,
+    "pooled_pr_auc": 0.4873465140229355,
+    "within_allele": {
+      "n_alleles": 35,
+      "n_pairs_covered": 31245,
+      "macro_auc": 0.45032625581141256,
+      "weighted_auc": 0.473192728837883
+    },
+    "within_study": {
+      "n_groups": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5329289412886483,
+      "weighted_auc": 0.561679953677989,
+      "frac_groups_above_chance": 0.5614035087719298
+    },
+    "within_study_and_allele": {
+      "n_groups": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5384613281233098,
+      "weighted_auc": 0.5659563568463788,
+      "frac_groups_above_chance": 0.5853658536585366
+    }
+  },
+  "ranking_nofeat": {
+    "n_scored": 31274,
+    "pooled_auc": 0.48316141226244574,
+    "pooled_pr_auc": 0.3232548812882807,
+    "within_allele": {
+      "n_alleles": 35,
+      "n_pairs_covered": 31245,
+      "macro_auc": 0.4949541204489299,
+      "weighted_auc": 0.4733303726678673
+    },
+    "within_study": {
+      "n_groups": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5489891514706796,
+      "weighted_auc": 0.585465998757135,
+      "frac_groups_above_chance": 0.6081871345029239
+    },
+    "within_study_and_allele": {
+      "n_groups": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5732187557764573,
+      "weighted_auc": 0.5941275829573641,
+      "frac_groups_above_chance": 0.6
+    }
   }
 }

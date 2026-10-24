@@ -1,0 +1,118 @@
+{
+  "LR": {
+    "colorectal": {
+      "n_patients": 10,
+      "mean_auc": 0.9501349559550765,
+      "median_auc": 1.001528121054119
+    },
+    "lung": {
+      "n_patients": 5,
+      "mean_auc": 0.9775108135051969,
+      "median_auc": 0.9847497431381185
+    },
+    "melanoma/skin": {
+      "n_patients": 13,
+      "mean_auc": 0.991318678662148,
+      "median_auc": 0.9973929747530186
+    },
+    "other": {
+      "n_patients": 2,
+      "mean_auc": 1.0021262689577588,
+      "median_auc": 1.0021262689577588
+    },
+    "lung_minus_rest": {
+      "diff": 0.002221249996951024,
+      "ci95": [
+        -0.037992438169942584,
+        0.05355039365188543
+      ],
+      "lung_worse": false
+    }
+  },
+  "Voting": {
+    "colorectal": {
+      "n_patients": 10,
+      "mean_auc": 0.974991648502544,
+      "median_auc": 0.9970177830084628
+    },
+    "lung": {
+      "n_patients": 5,
+      "mean_auc": 0.9786736660119715,
+      "median_auc": 0.9825636536076457
+    },
+    "melanoma/skin": {
+      "n_patients": 13,
+      "mean_auc": 0.9752309411646926,
+      "median_auc": 0.9972345982485789
+    },
+    "other": {
+      "n_patients": 2,
+      "mean_auc": 0.9886900379245134,
+      "median_auc": 0.9886900379245134
+    },
+    "lung_minus_rest": {
+      "diff": 0.002715501566394875,
+      "ci95": [
+        -0.023597369605269657,
+        0.029881868661290514
+      ],
+      "lung_worse": false
+    }
+  },
+  "XGBoost": {
+    "colorectal": {
+      "n_patients": 10,
+      "mean_auc": 0.9661956045267261,
+      "median_auc": 1.0019839013795369
+    },
+    "lung": {
+      "n_patients": 5,
+      "mean_auc": 0.9796767033688795,
+      "median_auc": 0.9893419833178869
+    },
+    "melanoma/skin": {
+      "n_patients": 13,
+      "mean_auc": 0.9620238426990719,
+      "median_auc": 0.9991383260935512
+    },
+    "other": {
+      "n_patients": 2,
+      "mean_auc": 0.9611444730736465,
+      "median_auc": 0.9611444730736465
+    },
+    "lung_minus_rest": {
+      "diff": 0.016323111626613745,
+      "ci95": [
+        -0.023056947434339774,
+        0.059799473927804006
+      ],
+      "lung_worse": false
+    }
+  },
+  "yield": {
+    "colorectal": {
+      "n_patients": 38,
+      "n_imm": 37,
+      "n_tested": 182176,
+      "rate": 0.00020310029861233094
+    },
+    "lung": {
+      "n_patients": 12,
+      "n_imm": 25,
+      "n_tested": 31133,
+      "rate": 0.0008030064561719076
+    },
+    "melanoma/skin": {
+      "n_patients": 31,
+      "n_imm": 101,
+      "n_tested": 152978,
+      "rate": 0.0006602256533619213
+    },
+    "other": {
+      "n_patients": 17,
+      "n_imm": 15,
+      "n_tested": 54730,
+      "rate": 0.0002740727206285401
+    }
+  }
+}

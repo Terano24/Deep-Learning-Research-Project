@@ -1,0 +1,9 @@
+pages: 5
+  page 1: distinct text-block x origins = [0, 57, 308]
+  page 2: distinct text-block x origins = [0, 4, 57, 165, 245, 308]
+  page 3: distinct text-block x origins = [0, 4, 57, 124, 165, 245]
+
+  'Institut Teknologi Sepuluh Nopember': OK
+  'Correspondence to': OK
+  'Abstract': OK
+  '1. Overview': OK

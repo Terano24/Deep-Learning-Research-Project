@@ -1,0 +1,377 @@
+{
+  "min_study": 10,
+  "n_pairs": 31274,
+  "features_within_study": {
+    "self_exact": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.48337810585961427,
+      "ci95": [
+        0.4678755220273703,
+        0.4981211537742991
+      ],
+      "frac_above_chance": 0.15789473684210525,
+      "beats_chance": false
+    },
+    "self_within1": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5010973057934872,
+      "ci95": [
+        0.4908975261636851,
+        0.5115015836714939
+      ],
+      "frac_above_chance": 0.28654970760233917,
+      "beats_chance": false
+    },
+    "self_7mer_frac": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.47224139443034224,
+      "ci95": [
+        0.4513862896943433,
+        0.4937219508061068
+      ],
+      "frac_above_chance": 0.34502923976608185,
+      "beats_chance": false
+    },
+    "hydro_mean": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5500346952280726,
+      "ci95": [
+        0.5184388964851343,
+        0.5817410511863036
+      ],
+      "frac_above_chance": 0.5847953216374269,
+      "beats_chance": true
+    },
+    "hydro_tcr_facing": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5244900458463769,
+      "ci95": [
+        0.494577171248925,
+        0.5535226448099761
+      ],
+      "frac_above_chance": 0.543859649122807,
+      "beats_chance": false
+    },
+    "hydro_anchor": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5245484664123581,
+      "ci95": [
+        0.49598657707062777,
+        0.5536857358205572
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    },
+    "charge": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.4895758608171132,
+      "ci95": [
+        0.463011658102976,
+        0.5168276999878554
+      ],
+      "frac_above_chance": 0.4269005847953216,
+      "beats_chance": false
+    },
+    "aromatic_frac": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5420023284721883,
+      "ci95": [
+        0.5168664574117475,
+        0.5683480035074006
+      ],
+      "frac_above_chance": 0.6666666666666666,
+      "beats_chance": true
+    },
+    "length10": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.4950636053569246,
+      "ci95": [
+        0.4740480156223333,
+        0.5165709721124564
+      ],
+      "frac_above_chance": 0.3508771929824561,
+      "beats_chance": false
+    }
+  },
+  "models_within_study": {
+    "ours_pointwise": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5371872463762406,
+      "ci95": [
+        0.5080811342734344,
+        0.5661774609230384
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": true
+    },
+    "ours_study_weighted": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5462093198290272,
+      "ci95": [
+        0.5158427761547194,
+        0.5756201639140104
+      ],
+      "frac_above_chance": 0.6081871345029239,
+      "beats_chance": true
+    },
+    "ours_drop_dominant": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5335812814528814,
+      "ci95": [
+        0.5042217292214579,
+        0.5617594033335145
+      ],
+      "frac_above_chance": 0.631578947368421,
+      "beats_chance": true
+    },
+    "ours_mixed_only": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5246255820428894,
+      "ci95": [
+        0.4940098903973121,
+        0.5543130822991545
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    },
+    "ours_ranking": {
+      "n_studies": 171,
+      "n_pairs": 12652,
+      "macro_auc": 0.5275351700978205,
+      "ci95": [
+        0.4985866754976392,
+        0.5566149744909407
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    }
+  },
+  "models_within_study_allele": {
+    "ours_pointwise": {
+      "n_studies": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5315076687886289,
+      "ci95": [
+        0.5032153082680798,
+        0.5583222652066733
+      ],
+      "frac_above_chance": 0.5170731707317073,
+      "beats_chance": true
+    },
+    "ours_study_weighted": {
+      "n_studies": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5479122695889401,
+      "ci95": [
+        0.5187423370183935,
+        0.5764611216943694
+      ],
+      "frac_above_chance": 0.5902439024390244,
+      "beats_chance": true
+    },
+    "ours_drop_dominant": {
+      "n_studies": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5403895519425096,
+      "ci95": [
+        0.5119473185620508,
+        0.5681626247763426
+      ],
+      "frac_above_chance": 0.6048780487804878,
+      "beats_chance": true
+    },
+    "ours_mixed_only": {
+      "n_studies": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5427337502997303,
+      "ci95": [
+        0.5121913096951828,
+        0.5732129452324157
+      ],
+      "frac_above_chance": 0.6,
+      "beats_chance": true
+    },
+    "ours_ranking": {
+      "n_studies": 205,
+      "n_pairs": 9094,
+      "macro_auc": 0.5565832241872493,
+      "ci95": [
+        0.5260590324135936,
+        0.5875058846478399
+      ],
+      "frac_above_chance": 0.6048780487804878,
+      "beats_chance": true
+    }
+  },
+  "lung_features": {
+    "self_exact": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.43825351906449683,
+      "ci95": [
+        0.34434627003557794,
+        0.5081810851325549
+      ],
+      "frac_above_chance": 0.1111111111111111,
+      "beats_chance": false
+    },
+    "self_within1": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.4783388909947953,
+      "ci95": [
+        0.43377636334433944,
+        0.5135810081722894
+      ],
+      "frac_above_chance": 0.3333333333333333,
+      "beats_chance": false
+    },
+    "self_7mer_frac": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.4740120786180235,
+      "ci95": [
+        0.3240272426760795,
+        0.6369581239169895
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    },
+    "hydro_mean": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.4500815175460801,
+      "ci95": [
+        0.3440537371360726,
+        0.5462684501051819
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    },
+    "hydro_tcr_facing": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5482710863701461,
+      "ci95": [
+        0.4274403645569622,
+        0.6494023710745216
+      ],
+      "frac_above_chance": 0.7777777777777778,
+      "beats_chance": false
+    },
+    "hydro_anchor": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5083689898898479,
+      "ci95": [
+        0.4122607404965455,
+        0.6219294651303746
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    },
+    "charge": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5900635860714735,
+      "ci95": [
+        0.499664950919331,
+        0.6924169995070311
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    },
+    "aromatic_frac": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5190290405219775,
+      "ci95": [
+        0.4464512031501852,
+        0.5927341962983643
+      ],
+      "frac_above_chance": 0.5555555555555556,
+      "beats_chance": false
+    },
+    "length10": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.4833926665440616,
+      "ci95": [
+        0.36562046135920306,
+        0.611954094640494
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    }
+  },
+  "lung_models": {
+    "ours_pointwise": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.48744574015797,
+      "ci95": [
+        0.39065140708081203,
+        0.5947473580123411
+      ],
+      "frac_above_chance": 0.3333333333333333,
+      "beats_chance": false
+    },
+    "ours_study_weighted": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.529464521693374,
+      "ci95": [
+        0.39388412276105156,
+        0.6543422801092047
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    },
+    "ours_drop_dominant": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.45751402430427873,
+      "ci95": [
+        0.36360401415113436,
+        0.546215399471476
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    },
+    "ours_mixed_only": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5006021280549786,
+      "ci95": [
+        0.37137995327585765,
+        0.6498792693125941
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    },
+    "ours_ranking": {
+      "n_studies": 9,
+      "n_pairs": 941,
+      "macro_auc": 0.5210960705570438,
+      "ci95": [
+        0.3763171189200968,
+        0.6716486762705942
+      ],
+      "frac_above_chance": 0.4444444444444444,
+      "beats_chance": false
+    }
+  }
+}
