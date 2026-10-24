@@ -1,0 +1,74 @@
+{
+  "n_lung_pairs": 1109,
+  "n_studies": 67,
+  "ours_ranking": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.5376504738324938,
+    "pr_auc": 0.21918559590189624,
+    "within_allele": 0.571499626071435,
+    "n_alleles": 14,
+    "within_study": 0.5210960705570438,
+    "n_studies": 9
+  },
+  "ours_study_weighted": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.48505399982924957,
+    "pr_auc": 0.21932420543470016,
+    "within_allele": 0.45776214734348325,
+    "n_alleles": 14,
+    "within_study": 0.529464521693374,
+    "n_studies": 9
+  },
+  "ours_pointwise": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.31764919320413215,
+    "pr_auc": 0.14195540940485685,
+    "within_allele": 0.3425645882160956,
+    "n_alleles": 14,
+    "within_study": 0.48744574015797,
+    "n_studies": 9
+  },
+  "deepimmuno": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.5323091863741143,
+    "pr_auc": 0.22224803810973928,
+    "within_allele": 0.5704468550679026,
+    "n_alleles": 14,
+    "within_study": 0.5349990376677263,
+    "n_studies": 9
+  },
+  "bigmhc_im": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.5819228634850167,
+    "pr_auc": 0.3561060933323408,
+    "within_allele": 0.6540315108406481,
+    "n_alleles": 14,
+    "within_study": 0.7475183752777533,
+    "n_studies": 9
+  },
+  "mixmhcpred": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.4964676001024503,
+    "pr_auc": 0.22069368625093483,
+    "within_allele": 0.5559032922248952,
+    "n_alleles": 14,
+    "within_study": 0.612496793172943,
+    "n_studies": 9
+  },
+  "allele_prior": {
+    "n": 1109,
+    "n_pos": 208,
+    "auc": 0.49996798429095873,
+    "pr_auc": 0.19682522358906368,
+    "within_allele": 0.5,
+    "n_alleles": 14,
+    "within_study": 0.5071755257818655,
+    "n_studies": 9
+  }
+}

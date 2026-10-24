@@ -1,0 +1,271 @@
+{
+  "n_test_pairs": 4641,
+  "missing": {
+    "ours": 0,
+    "bigmhc_im": 0,
+    "deepimmuno": 0,
+    "mixmhcpred": 1,
+    "gbm_baseline": 0,
+    "allele_prior_baseline": 0
+  },
+  "all": {
+    "ours": {
+      "n": 4641,
+      "n_pos": 1470,
+      "auc": 0.832185816616145,
+      "pr_auc": 0.7024825538609165,
+      "within_allele": 0.7687466673367703,
+      "n_alleles": 24
+    },
+    "bigmhc_im": {
+      "n": 4641,
+      "n_pos": 1470,
+      "auc": 0.6469371665411671,
+      "pr_auc": 0.4643388649748338,
+      "within_allele": 0.609170562729426,
+      "n_alleles": 24
+    },
+    "deepimmuno": {
+      "n": 4641,
+      "n_pos": 1470,
+      "auc": 0.7916291776881046,
+      "pr_auc": 0.634541323675955,
+      "within_allele": 0.6612906622286808,
+      "n_alleles": 24
+    },
+    "mixmhcpred": {
+      "n": 4640,
+      "n_pos": 1470,
+      "auc": 0.5586405287667117,
+      "pr_auc": 0.35836585055245745,
+      "within_allele": 0.5702234151914327,
+      "n_alleles": 24
+    },
+    "gbm_baseline": {
+      "n": 4641,
+      "n_pos": 1470,
+      "auc": 0.8103565046327581,
+      "pr_auc": 0.6664363393222227,
+      "within_allele": 0.7214310735307046,
+      "n_alleles": 24
+    },
+    "allele_prior_baseline": {
+      "n": 4641,
+      "n_pos": 1470,
+      "auc": 0.7517681497070604,
+      "pr_auc": 0.5466259902708404,
+      "within_allele": 0.5,
+      "n_alleles": 24
+    },
+    "ours_vs_bigmhc_im_overall": {
+      "mean_diff": 0.18510677216017762,
+      "ci95": [
+        0.16486152200329296,
+        0.20461002779741508
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_bigmhc_im_within_allele": {
+      "mean_diff": 0.1623617883439084,
+      "ci95": [
+        0.13533809131764418,
+        0.1902157443280602
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_deepimmuno_overall": {
+      "mean_diff": 0.04063684457044354,
+      "ci95": [
+        0.03254411032002211,
+        0.04858747495954994
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_deepimmuno_within_allele": {
+      "mean_diff": 0.1073514678290611,
+      "ci95": [
+        0.08612567575928402,
+        0.12832275054029718
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_mixmhcpred_overall": {
+      "mean_diff": 0.2736855976362463,
+      "ci95": [
+        0.2526262750288071,
+        0.29562062615436174
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_mixmhcpred_within_allele": {
+      "mean_diff": 0.2016158774469732,
+      "ci95": [
+        0.17279996979362258,
+        0.23030423297308433
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_gbm_baseline_overall": {
+      "mean_diff": 0.02190057568279883,
+      "ci95": [
+        0.015144494305915062,
+        0.028533788983165137
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_gbm_baseline_within_allele": {
+      "mean_diff": 0.044962790812176676,
+      "ci95": [
+        0.030135331842208575,
+        0.06024599415084133
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_allele_prior_baseline_overall": {
+      "mean_diff": 0.08058852575659502,
+      "ci95": [
+        0.07075185814081891,
+        0.09140319287161468
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_allele_prior_baseline_within_allele": {
+      "mean_diff": 0.2716622562530098,
+      "ci95": [
+        0.25540435421455354,
+        0.2881744449555768
+      ],
+      "p_gt_0": 1.0
+    }
+  },
+  "unseen_by_deepimmuno": {
+    "ours": {
+      "n": 2901,
+      "n_pos": 970,
+      "auc": 0.8053051941465081,
+      "pr_auc": 0.6882032926623372,
+      "within_allele": 0.7536351012595979,
+      "n_alleles": 20
+    },
+    "bigmhc_im": {
+      "n": 2901,
+      "n_pos": 970,
+      "auc": 0.6040671197552681,
+      "pr_auc": 0.44590188434741856,
+      "within_allele": 0.5858465449601551,
+      "n_alleles": 20
+    },
+    "deepimmuno": {
+      "n": 2901,
+      "n_pos": 970,
+      "auc": 0.7626741125531881,
+      "pr_auc": 0.6132972273239705,
+      "within_allele": 0.6566189891858714,
+      "n_alleles": 20
+    },
+    "mixmhcpred": {
+      "n": 2900,
+      "n_pos": 970,
+      "auc": 0.5872132898883606,
+      "pr_auc": 0.40693197125431446,
+      "within_allele": 0.5882809098569945,
+      "n_alleles": 20
+    },
+    "gbm_baseline": {
+      "n": 2901,
+      "n_pos": 970,
+      "auc": 0.7759576524102142,
+      "pr_auc": 0.6463532512550707,
+      "within_allele": 0.7028230227853522,
+      "n_alleles": 20
+    },
+    "allele_prior_baseline": {
+      "n": 2901,
+      "n_pos": 970,
+      "auc": 0.7174579700705258,
+      "pr_auc": 0.5247706703697919,
+      "within_allele": 0.5,
+      "n_alleles": 20
+    },
+    "ours_vs_bigmhc_im_overall": {
+      "mean_diff": 0.20169994925700796,
+      "ci95": [
+        0.17576717949553725,
+        0.22766935040190964
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_bigmhc_im_within_allele": {
+      "mean_diff": 0.16919346832112422,
+      "ci95": [
+        0.13143547041450984,
+        0.20591192198503103
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_deepimmuno_overall": {
+      "mean_diff": 0.042851734975305006,
+      "ci95": [
+        0.03078529232772363,
+        0.05470272748995563
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_deepimmuno_within_allele": {
+      "mean_diff": 0.09706315220759067,
+      "ci95": [
+        0.07345116039102595,
+        0.12137626060547452
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_mixmhcpred_overall": {
+      "mean_diff": 0.2187533447760022,
+      "ci95": [
+        0.19154956804714054,
+        0.24594925776462176
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_mixmhcpred_within_allele": {
+      "mean_diff": 0.15913601091298538,
+      "ci95": [
+        0.12274443343109,
+        0.19589574590990355
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_gbm_baseline_overall": {
+      "mean_diff": 0.029540602855589973,
+      "ci95": [
+        0.019440717314695415,
+        0.03967865625876577
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_gbm_baseline_within_allele": {
+      "mean_diff": 0.05002329906521136,
+      "ci95": [
+        0.03072194987448549,
+        0.07123238426976741
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_allele_prior_baseline_overall": {
+      "mean_diff": 0.08812696214766945,
+      "ci95": [
+        0.07335445519190302,
+        0.10268744250288793
+      ],
+      "p_gt_0": 1.0
+    },
+    "ours_vs_allele_prior_baseline_within_allele": {
+      "mean_diff": 0.2515921047430669,
+      "ci95": [
+        0.2285166640533294,
+        0.2727927800531846
+      ],
+      "p_gt_0": 1.0
+    }
+  }
+}

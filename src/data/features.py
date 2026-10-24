@@ -74,20 +74,30 @@ def build_self_index(path=PROTEOME, lengths=(9, 10), kmer=7):
     The short set is held as a sorted numpy array and queried with searchsorted to
     keep memory manageable (~11M entries).
     """
-    full = {n: set() for n in lengths}
-    short = []
+    # Every index is a sorted int64 array rather than a Python set: the proteome yields
+    # ~11M k-mers per length, which costs ~90 MB as an array but close to 1 GB as a set.
+    # Buffers are flushed and deduped in bounded chunks so peak memory stays modest.
+    sizes = list(lengths) + [kmer]
+    arrays = {n: np.empty(0, dtype=np.int64) for n in sizes}
+    bufs = {n: [] for n in sizes}
+
+    def flush(n, force=False):
+        if bufs[n] and (force or len(bufs[n]) >= 500_000):
+            arrays[n] = np.union1d(arrays[n], np.fromiter(bufs[n], dtype=np.int64,
+                                                          count=len(bufs[n])))
+            bufs[n].clear()
+
     for prot in iter_proteins(path):
-        for n in lengths:
+        for n in sizes:
+            b = bufs[n]
             for i in range(len(prot) - n + 1):
                 v = _encode(prot[i:i + n])
                 if v is not None:
-                    full[n].add(v)
-        for i in range(len(prot) - kmer + 1):
-            v = _encode(prot[i:i + kmer])
-            if v is not None:
-                short.append(v)
-    short = np.unique(np.array(short, dtype=np.int64))
-    return full, short, kmer
+                    b.append(v)
+            flush(n)
+    for n in sizes:
+        flush(n, force=True)
+    return {n: arrays[n] for n in lengths}, arrays[kmer], kmer
 
 
 def _in_sorted(values, sorted_arr):
@@ -99,15 +109,21 @@ def _in_sorted(values, sorted_arr):
 
 
 def _within_one(peptide, index):
-    """True if some human k-mer of the same length differs by at most one substitution."""
+    """True if some human k-mer of the same length differs by at most one substitution.
+
+    All single-substitution variants are tested in one vectorised membership query
+    against the sorted index.
+    """
+    if len(index) == 0:
+        return False
+    variants = []
     for i, orig in enumerate(peptide):
         for a in AMINO:
-            if a == orig:
-                continue
-            v = _encode(peptide[:i] + a + peptide[i + 1:])
-            if v is not None and v in index:
-                return True
-    return False
+            if a != orig:
+                v = _encode(peptide[:i] + a + peptide[i + 1:])
+                if v is not None:
+                    variants.append(v)
+    return bool(variants) and bool(_in_sorted(variants, index).any())
 
 
 def peptide_features(peptides, path=PROTEOME):
@@ -115,8 +131,9 @@ def peptide_features(peptides, path=PROTEOME):
     rows = []
     for p in peptides:
         n = len(p)
-        idx = full.get(n, set())
-        exact = _encode(p) in idx
+        idx = full.get(n, np.empty(0, dtype=np.int64))
+        code = _encode(p)
+        exact = code is not None and len(idx) and bool(_in_sorted([code], idx)[0])
         codes = [_encode(p[i:i + k]) for i in range(n - k + 1)]
         codes = [c for c in codes if c is not None]
         hits = int(_in_sorted(codes, short).sum()) if codes else 0

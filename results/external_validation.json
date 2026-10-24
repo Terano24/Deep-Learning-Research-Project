@@ -1,0 +1,47 @@
+{
+  "n_pairs": 5477,
+  "positive_rate": 0.44769034142778896,
+  "n_antigens": 1039,
+  "n_organisms": 188,
+  "random": {
+    "pooled_auc": 0.8570539144971889,
+    "within_allele": {
+      "n_alleles": 17,
+      "n_pairs_covered": 5322,
+      "macro_auc": 0.6641119077222776,
+      "weighted_auc": 0.7492293873845666
+    },
+    "n_scored": 5477
+  },
+  "peptide": {
+    "pooled_auc": 0.861857684062934,
+    "within_allele": {
+      "n_alleles": 17,
+      "n_pairs_covered": 5322,
+      "macro_auc": 0.6780380113500416,
+      "weighted_auc": 0.7560759008937402
+    },
+    "n_scored": 5477
+  },
+  "antigen": {
+    "pooled_auc": 0.8171411430035189,
+    "within_allele": {
+      "n_alleles": 17,
+      "n_pairs_covered": 5322,
+      "macro_auc": 0.5459311589238818,
+      "weighted_auc": 0.684895165144015
+    },
+    "n_scored": 5477
+  },
+  "organism": {
+    "pooled_auc": 0.5521898804147061,
+    "within_allele": {
+      "n_alleles": 17,
+      "n_pairs_covered": 5322,
+      "macro_auc": 0.3163594781921291,
+      "weighted_auc": 0.33963009506787123
+    },
+    "n_scored": 5477
+  },
+  "random_minus_organism": 0.30486403408248286
+}

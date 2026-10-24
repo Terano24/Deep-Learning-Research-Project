@@ -1,4 +1,19 @@
-numpy
-pandas
-tensorflow
-tf-keras
+# Python 3.12 (tested on 3.12.10)
+# Pinned to the versions used to produce the results in results/.
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.9.0
+scipy==1.17.1
+tensorflow==2.21.0
+tf-keras==2.21.0
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# Optional: only needed to extract text from the PDF in docs/
+pypdf==6.21.1
+
+# Not installed by this file -- external baselines live outside the repo:
+#   BigMHC      https://github.com/KarchinLab/bigmhc      (needs torch; ~2.5 GB of weights)
+#   MixMHCpred  https://github.com/GfellerLab/MixMHCpred  (~113 MB)
+#   PRIME       https://github.com/GfellerLab/PRIME       (requires MixMHCpred)
+# See README.md -> "Reproducing the benchmark" for how these are invoked.

@@ -1,0 +1,12 @@
+computing self-similarity features for 480 peptides...
+TRAP pathogenic set: 5477 peptide-HLA pairs, 44.8% positive
+  1039 antigens, 188 organisms, 37 alleles
+
+   grouping unit   pooled AUC   within-allele
+          random        0.857           0.749
+         peptide        0.862           0.756
+         antigen        0.817           0.685
+        organism        0.552           0.340
+
+random -> organism-grouped drop: +0.305
+saved C:\Users\Terano\OneDrive\Documents\CNN Lung Cancer\Deep-Learning-Research-Project\results\external_validation.json
