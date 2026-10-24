@@ -1,0 +1,497 @@
+# Leakage, Label Noise, and Overestimated Performance in T-Cell Epitope Immunogenicity Prediction
+
+**I Nyoman Agung Ananda Terano**¹  **Mirrabell Frederica Hadiwijono**²
+
+## Abstract
+
+Computational predictors of CD8⁺ T-cell epitope immunogenicity report ROC-AUC values of
+0.85–0.90 on data derived from the Immune Epitope Database (IEDB), and are used to
+prioritise candidates for neoantigen vaccines. We ask whether the labels these models are
+trained and evaluated on can support such values. From 65,732 human MHC-I T-cell assay
+records we identify 2,914 peptide–HLA pairs assayed independently by two or more
+publications, and measure how well one laboratory's outcome predicts another's on the same
+pair. Agreement is 72.2%, Cohen's κ = 0.273, and the equivalent AUC is 0.637 (95% CI
+0.628–0.648); restricting to the least-selected subset, pairs assayed by exactly two
+studies, gives 0.681. A repeat experiment observes the biology directly and is therefore
+the most informative predictor obtainable, so reported performance exceeds what these
+labels can support. We then identify three specific benchmark-construction choices that
+produce the excess. First, splitting data by peptide — the field's standard precaution —
+performs indistinguishably from not splitting at all (IEDB: 0.826 vs 0.840 random; an
+independent dataset: 0.862 vs 0.857), whereas grouping by source publication reduces AUC
+to 0.607. This follows from study-level label structure: one all-negative study supplies
+37% of all pairs, 75% of studies report a single outcome class, and a baseline using
+allele identity alone, with no peptide information, reaches 0.752 — above a widely used
+published predictor at 0.647. Second, two published predictors were trained on 37.5% and
+26.5% of our evaluation pairs, and score 0.07 and 0.26 AUC lower on pairs they had not
+seen. Third, defining negatives as untested candidates rather than assayed negatives
+raises AUC from ≈0.55 to ≈0.97 for the same nominal task. Under leakage-free evaluation,
+measuring within study and within allele across 205 groups, the best model we construct
+reaches 0.573 (95% CI 0.544–0.603) — 84% of the conservative reliability bound — and the
+original convolutional architecture reaches 0.544, a difference that is not significant.
+We release the benchmark, both split schemes, all model predictions, and a protocol for
+reporting.
+
+**Keywords:** T-cell epitope · immunogenicity prediction · data leakage · benchmark design
+· label reliability · reproducibility · IEDB
+
+
+^¹Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia. ²University of Toronto, Toronto, Canada. Correspondence to: corresponding author to be designated prior to submission.
+
+## 1. Overview
+
+Determining which peptide–MHC complexes elicit a CD8⁺ T-cell response is central to
+neoantigen vaccine design and adoptive cell therapy. Because experimental screening is slow
+and costly, computational predictors trained on IEDB have proliferated, and recent tools
+report ROC-AUC values between 0.85 and 0.90.
+
+Those figures sit uneasily beside two established facts.
+
+**The target is not a function of the inputs.** Immunogenicity does not depend on peptide
+and allele alone. It depends on the individual's T-cell receptor repertoire, prior antigen
+exposure, the remainder of their HLA genotype, and the tissue context. Two individuals
+carrying the same restricting allele can respond differently to the same peptide. Any model
+given only a peptide and an allele therefore has a ceiling below 1.0, whatever its
+architecture.
+
+**The measurements are variable.** International proficiency panels run by the Cancer
+Vaccine Consortium and the CIMT Immunoguiding Programme found inter-laboratory variation of
+roughly 35-fold for ELISpot, 20-fold for intracellular cytokine staining and 100-fold for
+tetramer assays, and identified laboratories unable to detect all predefined responses
+"even on a yes/no basis" [1].
+
+The immunology community responded with harmonisation guidelines, which reduce variation in
+prospective, coordinated studies [1]. They cannot retroactively harmonise a database
+aggregating decades of heterogeneous protocols. The consequence of that heterogeneity for
+machine-learning benchmarks built on IEDB has not, to our knowledge, been measured.
+Predictors instead handle label discordance by convention: PredIG, for example, discards
+peptide–HLA pairs whose outcomes disagree across experiments [8].
+
+**Prior work.** Related problems have been identified. Lee et al. documented HLA bias in
+immunogenicity
+predictors and showed that cross-species splits degrade performance [3]. Benchmarks of
+TCR–epitope predictors report near-chance performance on unseen epitopes, and warn that
+external negatives "introduce batch-like confounders, causing models to learn
+dataset-specific artifacts" [9]. Kapoor and Narayanan surveyed 17 scientific fields and
+found leakage affecting 294 papers, showing in a case study that complex models claimed to
+beat logistic regression did not do so once leakage was corrected [6].
+
+What has been missing is a quantitative account of what the labels themselves can support,
+and of which specific construction choices produce the gap between that bound and reported
+performance. This paper supplies both. Our contributions are:
+
+1. **A measured reliability bound** for IEDB immunogenicity labels, with sensitivity
+   analyses over aggregation rule, retesting frequency, assay family and HLA locus.
+2. **A demonstration that peptide-level splitting is ineffective**, replicated on an
+   independent dataset, and identification of source publication as the grouping unit that
+   matters.
+3. **A contamination audit** of two widely used published predictors against our evaluation
+   set.
+4. **A leakage-free performance estimate**, an architecture comparison showing the choice is
+   immaterial, and a worked example of a feature that standard validation endorses and
+   grouped validation rejects.
+
+## 2. Scope and definitions
+
+**Scope.** We examine benchmarks for CD8⁺ T-cell epitope immunogenicity built from IEDB
+assay records, where a model receives a peptide and an MHC-I allele and predicts whether a
+T-cell response was observed. We do not examine MHC binding or ligand presentation
+prediction, which are better-posed problems with more reproducible labels and where
+reported performance is correspondingly higher [9]. Nor do we examine patient-specific
+neoantigen prioritisation pipelines, which use tumour sequencing, expression and clonality
+in addition to sequence [4]; §3.7 shows why conflating the two inflates apparent
+performance.
+
+**Grouping unit.** A split is defined by the unit held out. Splitting *by peptide* means no
+peptide appears in both training and test data; splitting *by study* means no record from a
+given publication appears in both. Leakage here is not duplicated rows but shared structure:
+records from one publication share a cohort, a protocol and often an outcome, so a model can
+identify the source rather than the biology. We use "grouping unit" throughout to name the
+choice, because it is the choice that determines the reported number (§3.4).
+
+**Label reliability.** We define the reliability of a label set as the agreement between two
+independent measurements of the same quantity — here, two publications assaying the same
+peptide–HLA pair. Expressed as an AUC, this is the score a repeat experiment achieves when
+used to predict another experiment's outcome. Because a repeat experiment observes the
+biology rather than inferring it from sequence, it is the most informative predictor
+obtainable for that pair.
+
+**What reliability does and does not bound.** Reliability bounds what can be *measured*
+against a given label set; it is not a bound on the attainable accuracy of immunogenicity
+prediction in principle. When annotators carry independent noise, a well-specified model can
+exceed their mutual agreement [7]. We return to this in §4.
+
+**Operational task.** We take the task that matters for vaccine design to be ranking
+candidates *within one experiment*: given the peptides a laboratory is considering for one
+patient or one antigen, which should be screened first. This motivates reporting
+within-study and within-allele AUC alongside pooled figures (§7.5).
+
+## 3. Results
+
+### 3.1 One study supplies a third of the data, and most studies report a single outcome
+
+After retrieval and cleaning (§7.1), the benchmark comprises 31,274 unique peptide–HLA
+pairs, 31.7% positive, drawn from 1,365 publications. Its composition is not uniform
+(**Figure 1**). A single study contributes 11,486 pairs — 37% of the dataset — and every
+one of its outcomes is negative. Across all studies, 75% report only one outcome class.
+
+Study identity is therefore highly informative about the label before any peptide is
+examined. This observation motivates the analyses that follow.
+
+### 3.2 Immunogenicity labels reproduce poorly between laboratories
+
+Restricting to the 2,914 pairs assayed by two or more distinct publications, and taking
+each study's majority outcome, we asked how well one study's result predicts another's on
+the same pair (§7.3).
+
+| Quantity | Value (95% CI) |
+|---|---|
+| Agreement | 0.722 (0.714–0.731) |
+| Cohen's κ | **0.273** (0.255–0.294) |
+| **AUC** | **0.637** (0.628–0.648) |
+
+A κ of 0.273 denotes fair agreement only. Because a repeat experiment observes the
+underlying biology rather than inferring it from sequence, it is the most informative
+predictor obtainable for a given pair; its agreement with another experiment bounds what
+can be *measured* against these labels.
+
+### 3.3 The reliability estimate is robust to how it is measured
+
+Three threats to this estimate were tested (**Figure 3**).
+
+**Aggregation rule.** Majority vote 0.637; any-positive 0.652; ties-to-positive 0.646;
+ties-to-negative 0.556; and raw records with no aggregation at all 0.594. The range is
+0.556–0.652, and the least-processed variant falls below the headline figure.
+
+**Selection bias.** Pairs are not retested at random. Reproducibility declines with
+retesting frequency: 0.681 for pairs assayed by exactly two studies (n = 1,806), 0.531 for
+exactly three, 0.542 for four or more. We therefore adopt **0.681 as a conservative bound**.
+Separately, repeat-tested pairs are 72.5% positive against 26.5% for singly-tested pairs:
+the decision to retest is driven by the previous result.
+
+**Slice dependence.** By assay family, ELISpot 0.703, ICS 0.653, multimer/tetramer 0.604;
+by locus, HLA-A* 0.594, HLA-B* 0.775. Every slice falls far below reported performance. The
+ordering across assay families independently reproduces the proficiency-panel finding that
+tetramer assays vary more than ELISpot [1].
+
+### 3.4 Peptide-level splitting does not prevent leakage
+
+Holding out data by peptide is the standard precaution in this field. We compared grouping
+units using one model class throughout, so that only the split changes (**Figure 2**).
+
+| Grouping unit | IEDB (this study) | TRAP (independent) [3] |
+|---|---|---|
+| Random | 0.840 | 0.857 |
+| **Peptide** | **0.826** | **0.862** |
+| Antigen | — | 0.817 |
+| Source (study / organism) | **0.607** | **0.552** |
+
+On the independent dataset, peptide-grouping scores *above* random splitting. In both
+datasets, widening the grouping unit to the data source collapses performance. The
+precaution the field takes does not address the structure that inflates its results.
+
+### 3.5 A baseline that cannot see the peptide outscores published predictors
+
+On the held-out test split, an allele-prior baseline — predicting each allele's training-set
+positive rate, using no peptide information whatsoever — reaches 0.752. BigMHC_IM reaches
+0.647 and MixMHCpred 0.559 on the same pairs (**Figure 4**).
+
+A peptide-blind baseline exceeding published predictors is diagnostic: on this benchmark,
+allele identity and dataset structure carry more signal than the peptide sequence does.
+
+### 3.6 Published predictors were trained on the evaluation data
+
+Intersecting our evaluation pairs with released training sets (§7.5) shows substantial
+overlap, and performance falls sharply outside it (**Figure 5**).
+
+| Predictor | Overlap | Seen | Unseen |
+|---|---|---|---|
+| DeepImmuno [2] | 37.5% of test peptides | 0.835 | 0.763 |
+| BigMHC_IM [9] | 26.5% of lung pairs (exact pair) | 0.807 | **0.549** |
+
+On 778 lung-cancer-associated pairs unseen by both, every published predictor's interval
+includes chance: DeepImmuno 0.528 (0.475–0.581), BigMHC 0.502 (0.438–0.563), MixMHCpred
+0.446 (0.384–0.503), allele prior 0.464 (0.414–0.513).
+
+### 3.7 The definition of a negative changes the task by ≈0.4 AUC
+
+Using the harmonised multi-cancer resource of Müller et al. [4]: across 99 patients there
+are 1,780,481 candidate neo-peptides, of which 421,017 (23.6%) were experimentally screened
+and 178 were immunogenic.
+
+Ranking immunogenic peptides against *all* candidates — 76% never tested — gives per-patient
+AUC ≈ 0.97. Discriminating assayed positives from assayed negatives gives ≈ 0.55. Both are
+published as immunogenicity prediction. Most "negatives" in the former are peptides nobody
+screened, overwhelmingly non-binders that any filter rejects.
+
+### 3.8 Leakage-free performance approaches the measured ceiling, and architecture is immaterial
+
+Scoring every model from study-grouped out-of-fold predictions, within study and allele,
+across 205 groups, bootstrapping over studies (**Figure 6**):
+
+| Training scheme | AUC | 95% CI |
+|---|---|---|
+| **Ranking objective, no engineered features** | **0.573** | 0.544–0.603 |
+| Ranking objective, with features | 0.557 | 0.526–0.588 |
+| **CNN (original Conv2D architecture)** | **0.544** | 0.516–0.572 |
+| Study reweighting | 0.548 | 0.519–0.576 |
+| Pointwise, no features | 0.538 | 0.511–0.566 |
+| Pointwise baseline | 0.532 | 0.504–0.560 |
+
+All intervals clear chance. The best result is 84% of the conservative reliability bound
+(0.681). The convolutional architecture, given identical pretraining, folds and seeds,
+differs from the attention model by +0.013 (95% CI −0.017 to +0.043, not significant):
+**the architecture choice does not matter here.** The only comparison that reaches
+significance is the ranking objective over pointwise training (+0.035, CI +0.001 to +0.069),
+and its lower bound is close enough to zero that we report it as marginal.
+
+Simple study-aware reweighting recovers much of the loss on pooled metrics (0.623 → 0.700),
+and is a cheaper mitigation than a bespoke objective.
+
+### 3.9 A worked example: a feature that standard validation endorses and grouped validation rejects
+
+Self-similarity to the human proteome appears strongly predictive. Pooled across
+lung-cancer-associated pairs it reaches AUC 0.671 (CI 0.630–0.712), and under
+peptide-grouped validation it improved within-allele AUC by +0.034.
+
+Under study-grouped validation it provides nothing. Within study, its AUC is 0.483, with
+**0% of studies above chance**. Withholding the entire feature block changes within-study
+AUC by +0.005 (CI −0.015 to +0.024) and within-study-and-allele AUC by −0.007, neither
+significant. The feature separates studies, not peptides.
+
+Of nine feature families tested within study, only two clear chance: mean hydrophobicity
+0.550 (0.518–0.582) and aromatic content 0.542 (0.517–0.568), both consistent with known
+determinants of TCR recognition [8].
+
+
+## 4. Discussion
+
+Reported AUCs of 0.85–0.90 exceed both the measured reliability of the labels (0.637;
+conservatively 0.681) and the performance of any model we could construct under
+leakage-free evaluation (0.573). The excess is not evidence of superior models. It is
+produced by three separable choices: splitting by peptide, which is equivalent to not
+splitting; training-set overlap, present in both audited predictors; and defining negatives
+as untested candidates, which changes the task.
+
+A diagnostic follows. Because measured AUC is computed against noisy labels, a model
+recovering only transferable biological signal should score near the label reliability.
+Systematically exceeding it implies the model is also predicting the noise structure — and
+we show that structure is study-level.
+
+**On the interpretation of agreement as a bound.** Inter-annotator agreement is not in
+general an upper bound on achievable model performance: when annotators carry independent
+noise, a well-specified model can exceed their mutual agreement [7]. Our claim is therefore
+about *measured* performance against these labels, not about the attainable accuracy of
+immunogenicity prediction in principle. This distinction does not weaken the conclusion. If
+the label noise were random, high measured AUC would be unattainable; that it *is*
+attainable indicates the noise is systematic and learnable, which is precisely what §3.4–2.5
+demonstrate.
+
+**Relation to prior work.** This is an instance, in computational immunology, of the pattern
+Kapoor and Narayanan documented across 17 fields [6]. The parallel is close: in their case
+study, complex models claimed to beat logistic regression and ceased to do so once leakage
+was corrected; in ours, published predictors are outscored by a baseline that cannot see the
+peptide. Our setting permits one step theirs did not — because IEDB records which
+publication produced each measurement, and some pairs were measured more than once, the
+reliability of the labels can be measured directly rather than assumed. We extend Lee et
+al. [3], who identified HLA bias and cross-species degradation, by identifying the source
+publication as the operative grouping unit and by quantifying the label ceiling.
+
+**What bounds performance here.** At 0.573 against a conservative bound of 0.681, we are at
+84% of what the labels permit, leaving ≈0.11 AUC of headroom. The evidence suggests this is
+not reachable by architecture: the convolutional and attention models are statistically
+indistinguishable, and methods that do substantially better use information absent from
+sequence-only benchmarks — tumour expression, clonality, or the patient's own
+tumour-infiltrating repertoire [4]. Approaches adding TCR sequence without patient context
+report near-chance performance on unseen epitopes [9]. The constraint is consistent across
+sequence-based, structure-based and TCR-aware methods.
+
+The implications are therefore about data rather than models. Raising the ceiling requires
+harmonised assays of the kind proficiency panels have shown to reduce variance [1];
+broadening coverage requires more distinct epitopes, currently limited by peptide-library
+production; and patient-specific prediction requires patient-specific measurement.
+
+### 4.1 Recommendations
+
+1. Split by **source publication**, not only by peptide, and state the grouping unit used.
+2. Report **within-study** and **within-allele** AUC alongside any pooled figure.
+3. Include a **peptide-blind allele-prior baseline**. If it is competitive, the benchmark is
+   measuring dataset structure.
+4. State the **negative-set definition** explicitly; untested candidates and assayed
+   negatives are different tasks.
+5. **Audit training-set overlap** before reporting comparative performance.
+6. Bootstrap over **studies**, not rows; peptides within a study are not independent.
+
+
+## 5. Limitations
+
+- Label reliability is measured on IEDB alone. The independent dataset available to us
+  lacks publication identifiers, so §3.4 but not §3.2 could be replicated externally.
+- Repeat-tested pairs are a selected subset. We address this by stratification and adopt the
+  most favourable bound, but the estimate remains conditional on that subset.
+- MixMHCpred's training set is not public and could not be audited for contamination.
+- We show our protocol is stricter, not that it predicts clinical success better.
+  Establishing the latter would require prospective experimental validation.
+- Analysis is restricted to 9–10mers and HLA-A/B/C, inherited from the encoding of the
+  predictor we reimplemented.
+- We propose no improved predictor. Our best model is a leakage-free reference point, not a
+  contribution; its apparent advantage over published tools on the peptide-grouped split
+  (0.832 vs 0.792) is an artifact of the split we argue against.
+
+
+## 6. Conclusion
+
+The labels underlying T-cell epitope immunogenicity benchmarks reproduce across
+laboratories at AUC 0.637 (κ = 0.273; conservatively 0.681). Published predictors report
+0.85–0.90. We trace the difference to peptide-level splitting that provides no protection,
+training-set contamination of 26–38%, and negative-set definitions that alter the task
+being measured. A leakage-free model reaches 0.573, attaining 84% of what the labels permit,
+and the original convolutional architecture is statistically indistinguishable from it.
+Progress in this area is presently limited by measurement reproducibility and epitope
+coverage rather than by model architecture.
+
+
+## 7. Methods
+
+### 7.1 Data retrieval and cleaning
+
+T-cell assay records were retrieved from the IEDB Query API restricted to MHC class I,
+human host, and linear peptides of length 9–10 (92,721 records). Records were required to
+carry a four-digit HLA-A/B/C allele present in our pseudo-sequence table and a canonical
+twenty-letter peptide, leaving 65,732 records over 32,167 unique pairs. Any `Positive*`
+qualitative measure was mapped to 1 and `Negative` to 0. Records were collapsed to one label
+per pair by majority vote; 893 exact ties were dropped, giving **31,274 pairs, 31.7%
+positive**. A further 400,000 MHC binding and ligand-elution records were retrieved under
+the same constraints for encoder pretraining.
+
+### 7.2 Split schemes
+
+Two schemes are stored in the same table: `split`/`fold` grouped by peptide, and
+`study_split`/`study_fold` grouped by `reference_id`. Each uses a 15% grouped hold-out and
+10 grouped CV folds.
+
+### 7.3 Reliability measurement
+
+Pairs assayed in ≥2 distinct publications were identified. Each study contributes its
+majority outcome for that pair; within-study ties are dropped. Two studies are drawn at
+random per pair, and we compute agreement, Cohen's κ, and the AUC of study A's label
+predicting study B's. This is repeated over 200 random pairings; we report the mean and the
+2.5/97.5 percentiles. Sensitivity was assessed over four aggregation rules plus an
+unaggregated variant, over assay families, over HLA locus, and stratified by the number of
+studies testing a pair.
+
+### 7.4 Models
+
+*Published predictors.* DeepImmuno [2] (two-branch Conv2D); BigMHC_IM [9] (seven-network
+ensemble, presentation-pretrained then transfer-learned); MixMHCpred 3.0 [10] (binding only,
+included as a control). PRIME 2.0 was obtained but its bundled Windows binary did not
+execute; it is excluded and documented.
+
+*Baselines.* An allele prior predicting each allele's training-set positive rate, using no
+peptide information; gradient boosting on the AAindex/PCA encoding.
+
+*This study.* A bidirectional cross-attention network (65,987 parameters): learned residue
+and position embeddings, self-attention within the 10-position peptide and the 46-residue
+HLA pseudo-sequence, then cross-attention in both directions, a dense trunk and a sigmoid
+output. Pretrained on the binding corpus (held-out binding AUC 0.958) and fine-tuned on
+immunogenicity.
+
+*Training schemes.* Pointwise cross-entropy; dropping the dominant study; study-size
+reweighting; training on mixed-outcome studies only; and a study-stratified pairwise ranking
+objective over (immunogenic, non-immunogenic) pairs sharing a study and an allele. The CNN
+was trained from fresh initialisation — never from the published checkpoint — with identical
+pretraining, folds, class weighting and seeds.
+
+### 7.5 Evaluation
+
+Pooled AUC is reported with two stricter quantities: within-allele AUC, computed inside each
+allele; and within-study and within-study-and-allele AUC, computed inside each source
+publication. Groups require ≥10 pairs and both outcome classes. Confidence intervals for
+within-study quantities bootstrap over studies rather than rows. Models are scored from
+study-grouped out-of-fold predictions. Published training sets were intersected with our
+evaluation pairs by exact peptide and by exact peptide–HLA pair.
+
+
+## Figures
+
+**Figure 1 — Composition of the benchmark.** (a) Pairs per study, ranked, log scale; the
+largest study contributes 11,486 pairs (37% of the dataset) and is entirely negative.
+(b) Studies by outcome composition: 75% report a single outcome class.
+
+**Figure 2 — The grouping unit determines the reported number.** Pooled AUC under
+progressively wider grouping units, for (a) IEDB and (b) the independent TRAP dataset.
+Random and peptide-grouped splits are indistinguishable in both.
+
+**Figure 3 — Measured reliability of the labels, and its robustness.** AUC of one study's
+outcome predicting another's on the same pair, across aggregation rules, retesting strata,
+assay families and HLA loci. Shaded band marks published claims (0.85–0.90).
+
+**Figure 4 — Predictors on the held-out test split.** Pooled and within-allele AUC. The
+allele-prior baseline uses no peptide information.
+
+**Figure 5 — Training-set overlap.** AUC of two published predictors on pairs they were
+trained on versus pairs they had not seen.
+
+**Figure 6 — Leakage-free performance against the measured ceiling.** Within-study,
+within-allele AUC with intervals bootstrapped over studies, against the measured label
+reliability band and the range of published claims.
+
+
+## Data and code availability
+
+All analyses are reproducible from `docs/PIPELINE.md`, and
+`notebooks/Reproduce_Manuscript.ipynb` reproduces every number and figure. Code is organised
+as `src/data` (retrieval, cleaning, splits), `src/models` (architectures, training) and
+`src/analysis` (all reported analyses). The curated benchmark, both split schemes and all
+model predictions are released with the repository.
+
+External resources: IEDB Query API; UniProt UP000005640; TRAP [3]; the harmonised datasets
+of Müller et al. [4]; the public releases of DeepImmuno [2], BigMHC [9] and MixMHCpred [10].
+
+## Author contributions
+
+Both authors contributed to study design and manuscript preparation. Correspondence and
+submission are handled by the corresponding author, to be designated prior to submission.
+
+## Competing interests
+
+The authors declare no competing interests.
+
+## Funding
+
+This research received no specific grant from any funding agency.
+
+
+## References
+
+1. Janetzki S, Panageas KS, Ben-Porat L, Boyer J, Britten CM, et al. Results and
+   harmonization guidelines from two large-scale international Elispot proficiency panels
+   conducted by the Cancer Vaccine Consortium (CVC/SVI). *Cancer Immunol Immunother*
+   2008;57(3):303–315. doi:10.1007/s00262-007-0380-6
+2. Li G, Iyer B, Prasath VBS, Ni Y, Salomonis N. DeepImmuno: deep learning-empowered
+   prediction and generation of immunogenic peptides for T-cell immunity. *Brief Bioinform*
+   2021;22(6):bbab160. doi:10.1093/bib/bbab160
+3. Lee CH, Huh J, Buckley PR, Jang M, Pinho MP, et al. A robust deep learning workflow to
+   predict CD8⁺ T-cell epitopes. *Genome Med* 2023;15:70. doi:10.1186/s13073-023-01225-z
+4. Müller M, Huber F, Arnaud M, Kraemer AI, Ricart Altimiras E, et al. Machine learning
+   methods and harmonized datasets improve immunogenic neoantigen prediction. *Immunity*
+   2023;56(11):2650–2663.e6. doi:10.1016/j.immuni.2023.09.002
+5. Wells DK, van Buuren MM, Dang KK, Hubbard-Lucey VM, Sheehan KCF, et al. Key parameters
+   of tumor epitope immunogenicity revealed through a consortium approach improve neoantigen
+   prediction. *Cell* 2020;183(3):818–834.e13. doi:10.1016/j.cell.2020.09.015
+6. Kapoor S, Narayanan A. Leakage and the reproducibility crisis in machine-learning-based
+   science. *Patterns* 2023;4(9):100804. doi:10.1016/j.patter.2023.100804
+7. Richie R, Grover S, Tsui FR. Inter-annotator agreement is not the ceiling of machine
+   learning performance: evidence from a comprehensive set of simulations. *Proc BioNLP
+   Workshop, ACL* 2022:275–284.
+8. Calis JJA, Maybeno M, Greenbaum JA, Weiskopf D, De Silva AD, Sette A, Peters B, Keşmir C.
+   Properties of MHC class I presented peptides that enhance immunogenicity. *PLoS Comput
+   Biol* 2013;9(10):e1003266.
+9. Albert BA, Yang Y, Shao XM, Singh D, Smith KN, Anagnostou V, Karchin R. Deep neural
+   networks predict MHC-I epitope presentation and transfer learn neoepitope immunogenicity.
+   *Nat Mach Intell* 2023;5:861–872.
+10. Gfeller D, Schmidt J, Croce G, Guillaume P, Bobisse S, et al. Improved predictions of
+    antigen presentation and TCR recognition with MixMHCpred2.2 and PRIME2.0. *Cell Syst*
+    2023;14(1):72–83.
+
+*Reference details were verified against CrossRef and PubMed records where available.
+Entries 8–10 should be re-checked against the publisher record before journal submission.*

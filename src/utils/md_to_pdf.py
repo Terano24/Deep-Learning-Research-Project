@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 
+from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
@@ -22,9 +23,9 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (BaseDocTemplate, Frame, HRFlowable, PageBreak,
-                                PageTemplate, Paragraph, SimpleDocTemplate, Spacer,
-                                Table, TableStyle)
+from reportlab.platypus import (BaseDocTemplate, Frame, HRFlowable, Image as RLImage,
+                                KeepTogether, PageBreak, PageTemplate, Paragraph,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 
 FONT_CANDIDATES = [
     ('DejaVuSans', 'DejaVuSans-Bold', 'DejaVuSans-Oblique',
@@ -99,16 +100,16 @@ def styles(compact=False):
                                   alignment=TA_CENTER, spaceAfter=4),
         'h1': ParagraphStyle('h1', fontName=BOLD, fontSize=10.5 if compact else 13,
                              leading=13 if compact else 16,
-                             spaceBefore=16, spaceAfter=7, textColor=colors.black),
+                             spaceBefore=12 if compact else 16, spaceAfter=5 if compact else 7, textColor=colors.black),
         'h2': ParagraphStyle('h2', fontName=BOLD, fontSize=9.4 if compact else 11,
                              leading=12 if compact else 14,
-                             spaceBefore=12, spaceAfter=5, textColor=colors.black),
+                             spaceBefore=9 if compact else 12, spaceAfter=4 if compact else 5, textColor=colors.black),
         'h3': ParagraphStyle('h3', fontName=BOLD, fontSize=8.8 if compact else 10,
                              leading=11.5 if compact else 13,
-                             spaceBefore=9, spaceAfter=4),
-        'body': ParagraphStyle('b', alignment=TA_JUSTIFY, spaceAfter=6, **base),
+                             spaceBefore=7 if compact else 9, spaceAfter=3 if compact else 4),
+        'body': ParagraphStyle('b', alignment=TA_JUSTIFY, spaceAfter=4.5 if compact else 6, **base),
         'li': ParagraphStyle('li', alignment=TA_JUSTIFY, leftIndent=14, bulletIndent=4,
-                             spaceAfter=3, bulletFontName=REG, bulletFontSize=9.6, **base),
+                             spaceAfter=2 if compact else 3, bulletFontName=REG, bulletFontSize=9.6, **base),
         'quote': ParagraphStyle('q', leftIndent=16, rightIndent=10, fontName=ITAL,
                                 fontSize=9.4, leading=13, spaceAfter=6,
                                 textColor=colors.black),
@@ -121,11 +122,56 @@ def styles(compact=False):
         'cellh': ParagraphStyle('ch', fontName=BOLD, fontSize=6.8 if compact else 8.2,
                                 leading=8.8 if compact else 10.5,
                                 textColor=colors.black),
+        'caption': ParagraphStyle('cap', fontName=REG, fontSize=6.8 if compact else 8.2,
+                                  leading=8.5 if compact else 10.5,
+                                  spaceBefore=2 if compact else 3,
+                                  spaceAfter=4 if compact else 8, alignment=TA_JUSTIFY,
+                                  textColor=colors.black),
     }
 
 
 def split_row(line):
     return [c.strip() for c in line.strip().strip('|').split('|')]
+
+
+def list_item_text(lines, i, first):
+    """Join a list item with its indented continuation lines.
+
+    Without this a wrapped item's tail falls through to the paragraph branch and is
+    typeset as an unindented paragraph of its own, below the item it belongs to.
+    """
+    parts, i = [first], i + 1
+    while i < len(lines) and lines[i].strip() and lines[i][:1].isspace() \
+            and not re.match(r'^\s*([-*+]|\d+[.)])\s', lines[i]):
+        parts.append(lines[i].strip())
+        i += 1
+    return ' '.join(parts), i
+
+
+def compute_col_widths(rows, total_width, font_name, font_size, padding=8):
+    ncol = max(len(r) for r in rows)
+    min_widths = []
+    text_lens = []
+    for c in range(ncol):
+        words = []
+        full_texts = []
+        for r in rows:
+            if c < len(r):
+                clean = re.sub(r'[*_`#\[\]]|<[^>]+>', '', r[c]).strip()
+                words.extend(clean.split())
+                full_texts.append(clean)
+        max_word_w = max([pdfmetrics.stringWidth(w, font_name, font_size) for w in words] or [10])
+        min_widths.append(max_word_w + padding + 4)
+        max_len = max([len(t) for t in full_texts] or [1])
+        text_lens.append(max_len)
+
+    rem_width = total_width - sum(min_widths)
+    if rem_width > 0:
+        tot_len = sum(text_lens)
+        return [min_w + rem_width * (l / tot_len) for min_w, l in zip(min_widths, text_lens)]
+    else:
+        scale = total_width / sum(min_widths)
+        return [w * scale for w in min_widths]
 
 
 def build_table(rows, st, width):
@@ -136,7 +182,8 @@ def build_table(rows, st, width):
         r = r + [''] * (ncol - len(r))
         sty = st['cellh'] if i == 0 else st['cell']
         data.append([Paragraph(inline(c), sty) for c in r])
-    t = Table(data, colWidths=[width / ncol] * ncol, repeatRows=1, hAlign='LEFT')
+    col_widths = compute_col_widths(rows, width, st['cellh'].fontName, st['cellh'].fontSize)
+    t = Table(data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
     # monochrome: the header is separated by a rule, not a fill
     t.setStyle(TableStyle([
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
@@ -247,7 +294,7 @@ class TwoColumnDoc(BaseDocTemplate):
             self._handle_nextPageTemplate('even' if self.page % 2 else 'odd')
 
 
-def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
+def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_figures=False):
     st = styles(compact=twocol)
     lines = Path(md_path).read_text(encoding='utf-8').split('\n')
     if twocol:
@@ -260,8 +307,75 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
                                 leftMargin=2.1 * cm, rightMargin=2.1 * cm,
                                 topMargin=vmargin * cm, bottomMargin=vmargin * cm,
                                 title=Path(md_path).stem)
-    avail = doc.width
+    avail = doc.colw if twocol else doc.width
+
+    captions = {}
+    fig_files = {}
+    inserted_figs = set()
+    if with_figures:
+        in_figures = False
+        current_fig = None
+        caption_buf = []
+        for ln in lines:
+            s = ln.strip()
+            if s == '## Figures':
+                in_figures = True
+                continue
+            if in_figures and s.startswith('## '):
+                break
+            if in_figures:
+                m = re.match(r'^\*\*Figure\s+(\d+)\.\s*(.*?)\*\*(.*)$', s)
+                if m:
+                    if current_fig:
+                        captions[current_fig] = ' '.join(caption_buf).strip()
+                    current_fig = int(m.group(1))
+                    caption_buf = [f'**Figure {current_fig}. {m.group(2)}**' + m.group(3)]
+                elif current_fig and s:
+                    caption_buf.append(s)
+        if current_fig:
+            captions[current_fig] = ' '.join(caption_buf).strip()
+
+        # Two variants are rendered per figure: the full-width one, and a '_col'
+        # version typeset for a single column. A 7-inch figure scaled into a 3-inch
+        # column has 4pt type, so the two-column build takes the narrow one.
+        fig_dir = Path(md_path).parent / 'figures'
+        for num in range(1, 10):
+            matches = [p for p in sorted(fig_dir.glob(f'fig{num}_*.png'))
+                       if p.stem.endswith('_col') == twocol]
+            if not matches:
+                matches = sorted(fig_dir.glob(f'fig{num}_*.png'))
+            if matches:
+                fig_files[num] = matches[0]
+
+    def make_fig_flow(f_num):
+        if f_num not in fig_files or f_num not in captions:
+            return []
+        p = fig_files[f_num]
+        im = PILImage.open(p)
+        w, h = im.size
+        aspect = h / w
+        # a caption that flows into the next column is worse than a short column:
+        # the image and its caption travel as one block
+        return [
+            Spacer(1, 2 if twocol else 4),
+            KeepTogether([RLImage(str(p), width=avail, height=avail * aspect),
+                          Paragraph(inline(captions[f_num]), st['caption'])]),
+            Spacer(1, 4 if twocol else 6)
+        ]
+
     flow = []
+    pending_figs = []
+
+    def flush_pending_figs():
+        """Figures go at the end of the subsection that first cites them.
+
+        Placing one at its callout leaves whatever is left of the column empty,
+        because a figure taller than the remaining space has to start the next
+        column. Letting the section's prose finish first fills that column.
+        """
+        while pending_figs:
+            flow.extend(make_fig_flow(pending_figs.pop(0)))
+
     i = 0
     first_h1 = True
     while i < len(lines):
@@ -270,6 +384,12 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
 
         if not s:
             i += 1
+            continue
+
+        if with_figures and s == '## Figures':
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith('## '):
+                i += 1
             continue
 
         if re.match(r'^(---|\*\*\*|___)$', s):
@@ -287,6 +407,10 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
             while i < len(lines) and lines[i].strip().startswith('|'):
                 rows.append(split_row(lines[i]))
                 i += 1
+
+            # Tables are never swapped out for a figure. Where a result is adequately
+            # stated by its table there is no figure to swap in: the figure set is
+            # restricted to displays a table cannot replace (see make_figures.py).
             flow.append(Spacer(1, 3))
             flow.append(build_table(rows, st, avail))
             flow.append(Spacer(1, 8))
@@ -295,6 +419,10 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
         m = re.match(r'^(#{1,6})\s+(.*)$', s)
         if m:
             level, text = len(m.group(1)), m.group(2)
+            if with_figures and twocol and s.startswith('### 3.6') and 2 not in inserted_figs:
+                pending_figs.append(2)
+                inserted_figs.add(2)
+            flush_pending_figs()
             if level == 1 and first_h1:
                 flow.append(Paragraph(inline(text), st['title']))
                 first_h1 = False
@@ -325,15 +453,15 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
 
         m = re.match(r'^[-*+]\s+(.*)$', s)
         if m:
-            flow.append(Paragraph(inline(m.group(1)), st['li'], bulletText='\u2022'))
-            i += 1
+            text, i = list_item_text(lines, i, m.group(1))
+            flow.append(Paragraph(inline(text), st['li'], bulletText='\u2022'))
             continue
 
         m = re.match(r'^(\d+)[.)]\s+(.*)$', s)
         if m:
-            flow.append(Paragraph(inline(m.group(2)), st['li'],
+            text, i = list_item_text(lines, i, m.group(2))
+            flow.append(Paragraph(inline(text), st['li'],
                                   bulletText=f'{m.group(1)}.'))
-            i += 1
             continue
 
         buf = []
@@ -346,20 +474,33 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False):
         style = st['authors'] if len(flow) < 4 and para.startswith('**') else st['body']
         flow.append(Paragraph(inline(para), style))
 
+        if with_figures:
+            for f_num in sorted(fig_files):
+                if f'**Figure {f_num}**' in para and f_num not in inserted_figs:
+                    if f_num == 2 and twocol:
+                        # Defer Figure 2 to after section 3.5 so Page 2 Column 2 fills with text
+                        pass
+                    else:
+                        pending_figs.append(f_num)
+                        inserted_figs.add(f_num)
+
+    flush_pending_figs()
     doc.build(flow)
     return pdf_path
 
 
 if __name__ == '__main__':
-    FLAGS = {'--duplex', '--twocol'}
+    FLAGS = {'--duplex', '--twocol', '--figures'}
     duplex = '--duplex' in sys.argv          # mirrored margins for double-sided printing
     twocol = '--twocol' in sys.argv          # two-column layout, as used by ML preprints
+    with_figures = '--figures' in sys.argv    # embed figures inline
     args = [a for a in sys.argv[1:] if a not in FLAGS]
     src = args[0] if args else 'docs/MANUSCRIPT.md'
     dst = args[1] if len(args) > 1 else str(Path(src).with_suffix('.pdf'))
     # optional third positional argument: top/bottom margin in cm (default 2.0)
     vm = float(args[2]) if len(args) > 2 else 2.0
-    out = convert(src, dst, vmargin=vm, duplex=duplex, twocol=twocol)
+    out = convert(src, dst, vmargin=vm, duplex=duplex, twocol=twocol, with_figures=with_figures)
     tags = ' '.join(t for t, on in [('[two-column]', twocol),
-                                    ('[double-sided]', duplex)] if on)
+                                    ('[double-sided]', duplex),
+                                    ('[with-figures]', with_figures)] if on)
     print('wrote', out, f'({Path(out).stat().st_size:,} bytes)', tags)

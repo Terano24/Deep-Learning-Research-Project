@@ -1,6 +1,12 @@
 """
 Publication figures for the manuscript.
 
+Two figures only. Every result a table states adequately -- the split-scheme
+comparison (3.4), the predictor comparison (3.5), the training-set overlap (3.6),
+the negative-definition counts (3.7) -- is left to its table. A figure is drawn only
+where the display does something a table cannot: show the shape of a distribution
+(Fig 1), or place many interval estimates against shared reference bands (Fig 2).
+
 Rendered for print rather than for screen: greyscale fills with hatching and distinct
 markers, so every figure survives black-and-white printing and is colourblind-safe by
 construction rather than by palette choice. Serif type matches the manuscript. Each
@@ -19,7 +25,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.lines import Line2D
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 RESULTS = BASE_DIR / 'results'
@@ -49,6 +54,26 @@ plt.rcParams.update({
 # greyscale steps: light -> dark, used as an ordered sequence, never cycled
 G = {'light': '0.82', 'mid': '0.58', 'dark': '0.30', 'ink': '0.12'}
 CHANCE = 0.5
+CLAIMS = (0.85, 0.90)   # performance range reported in the literature
+# labels that sit on top of a reference line punch a hole in it rather than cross it
+KNOCKOUT = dict(facecolor='white', edgecolor='none', pad=1.2)
+
+# Each figure is drawn twice. The full-width version is for the single-column
+# manuscript and for preprint servers; the column version is for the two-column
+# build, where a 7.1-inch figure scaled into a 3.2-inch column is unreadable. The
+# narrow version is not a shrunk copy: type stays at print size and the wordier
+# annotations are shortened, which is why NARROW is consulted inside each figure.
+FULL_W, COL_W = 7.1, 3.25
+NARROW = False
+
+
+def width():
+    return COL_W if NARROW else FULL_W
+
+
+def pt(full, narrow):
+    """Pick a size or a string by the variant being drawn."""
+    return narrow if NARROW else full
 
 
 def load(name):
@@ -57,226 +82,156 @@ def load(name):
 
 
 def save(fig, stem):
+    stem = f'{stem}_col' if NARROW else stem
     for ext in ('pdf', 'png'):
         fig.savefig(FIGDIR / f'{stem}.{ext}')
     plt.close(fig)
     print(f'  wrote {stem}.pdf / .png', flush=True)
 
 
-def chance_line(ax, y=CHANCE, label='chance'):
-    """Dashed reference at 0.5, labelled at the left margin where marks never reach."""
-    ax.axhline(y, color=G['ink'], lw=0.8, ls=(0, (4, 3)), zorder=1)
-    ax.annotate(label, xy=(0.006, y), xycoords=('axes fraction', 'data'),
-                xytext=(0, 2), textcoords='offset points',
-                ha='left', va='bottom', fontsize=7, color=G['ink'])
+def claims_band(ax, ytop, shade=G['light'], label=None):
+    """The 0.85-0.90 band every estimate in this paper is measured against."""
+    if label is None:
+        label = pt('published claims\n0.85-0.90', 'published\nclaims')
+    ax.axvspan(*CLAIMS, color=shade, alpha=0.8, zorder=0)
+    ax.annotate(label, xy=(sum(CLAIMS) / 2, ytop), ha='center', va='bottom',
+                fontsize=pt(7.2, 6.0), color=G['ink'])
+
+
+def chance_line(ax, ytop):
+    """Dashed reference at 0.5, labelled at the top where no estimate reaches."""
+    ax.axvline(CHANCE, color=G['ink'], lw=0.8, ls=(0, (4, 3)), zorder=1)
+    ax.annotate('chance', xy=(CHANCE, ytop), ha='center', va='bottom',
+                fontsize=pt(7.2, 6.0), color=G['ink'], zorder=5, bbox=KNOCKOUT)
+
+
+def forest_row(ax, y, value, ci=None, emphasis=False):
+    """One estimate: interval, marker, value label.
+
+    The label sits above the marker at full width, where rows are far enough apart.
+    In the narrow variant rows are close enough that a label above one row lands on
+    the interval of the row above it, so there it goes beside the interval instead.
+    """
+    if ci:
+        ax.plot(ci, [y, y], color=G['ink'], lw=1.0, solid_capstyle='butt', zorder=2)
+    ax.scatter([value], [y], s=(34 if emphasis else 22) * pt(1.0, 0.7), zorder=3,
+               facecolor=G['ink'] if emphasis else 'white',
+               edgecolor=G['ink'], lw=pt(1.0, 0.8))
+    if NARROW:
+        ax.annotate(f'{value:.3f}', xy=(max(ci) if ci else value, y), xytext=(4, 0),
+                    textcoords='offset points', ha='left', va='center', fontsize=6.0,
+                    color=G['ink'], zorder=5, bbox=KNOCKOUT)
+    else:
+        ax.annotate(f'{value:.3f}', xy=(value, y), xytext=(0, 6),
+                    textcoords='offset points', ha='center', fontsize=7.2,
+                    color=G['ink'])
 
 
 # ----------------------------------------------------------------------------- Fig 1
 def fig1_dataset():
-    """Composition of the benchmark: study sizes and label homogeneity."""
+    """How unevenly the benchmark is spread across its source studies.
+
+    A 1,365-study size distribution is either 1,365 table rows or a handful of
+    arbitrary quantiles; the shape is the point, so this one stays a figure. Rank is
+    on a log axis because everything that matters happens in the first 1% of studies,
+    which a linear axis crushes against the origin.
+    """
     df = pd.read_csv(BASE_DIR / 'data' / 'processed' / 'dataset.csv')
     sizes = df.groupby('reference_id').size().sort_values(ascending=False)
+    n_pairs, n_studies = len(df), len(sizes)
+    rank = np.arange(1, n_studies + 1)
+    cum = np.cumsum(sizes.values) / n_pairs
+
     comp = df.groupby('reference_id')['label'].mean()
-    allneg = int((comp == 0).sum()); allpos = int((comp == 1).sum())
-    mixed = int(len(comp) - allneg - allpos)
+    single = comp[(comp == 0) | (comp == 1)].index
+    single_share = df['reference_id'].isin(single).mean()
 
-    fig, (a, b) = plt.subplots(1, 2, figsize=(7.1, 2.7),
-                               gridspec_kw={'width_ratios': [1.45, 1]})
+    fig, ax = plt.subplots(figsize=(width(), pt(3.1, 1.85)))
+    ax.plot(rank, sizes.values, color=G['ink'], lw=1.2, zorder=3)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim(0.8, n_studies * 1.35)
+    ax.set_ylim(0.6, sizes.iloc[0] * pt(4.0, 6.0))
+    ax.set_xlabel('study, ranked by size (log)', fontsize=pt(8.5, 7.0))
+    ax.set_ylabel('peptide–HLA pairs\ncontributed (log)', fontsize=pt(8.5, 7.0))
+    ax.tick_params(labelsize=pt(8, 6.5))
 
-    a.plot(np.arange(1, len(sizes) + 1), sizes.values, color=G['ink'], lw=1.1)
-    a.set_yscale('log')
-    a.set_xlabel('study, ranked by size')
-    a.set_ylabel('peptide–HLA pairs (log)')
-    a.set_title('a  One study dominates the dataset', loc='left', fontweight='bold')
     top = sizes.iloc[0]
-    a.scatter([1], [top], s=26, facecolor='white', edgecolor=G['ink'], zorder=3, lw=1.1)
-    a.annotate(f'{top:,} pairs\n= {top/len(df):.0%} of all data\n(all negative)',
-               xy=(1, top), xytext=(14, top * 0.42), fontsize=7.5, color=G['ink'],
-               arrowprops=dict(arrowstyle='-', lw=0.7, color=G['ink']))
+    ax.scatter([1], [top], s=pt(28, 20), facecolor='white', edgecolor=G['ink'],
+               zorder=4, lw=1.1)
+    ax.annotate(pt(f'largest study: {top:,} pairs,\n{top / n_pairs:.0%} of the benchmark,\n'
+                   'every outcome negative',
+                   f'largest study:\n{top:,} pairs ({top / n_pairs:.0%}),\nall negative'),
+                xy=(1, top), xytext=(pt(2.4, 2.0), top * pt(0.95, 4.6)),
+                fontsize=pt(7.5, 6.0), color=G['ink'], va='top', ha='left',
+                arrowprops=dict(arrowstyle='-', lw=0.7, color=G['ink'],
+                                shrinkA=0, shrinkB=4))
 
-    bars = [('all negative', allneg, G['light'], '///'),
-            ('all positive', allpos, G['mid'], '\\\\\\'),
-            ('both outcomes', mixed, G['dark'], '')]
-    y = np.arange(len(bars))
-    for i, (lab, v, c, h) in enumerate(bars):
-        b.barh(i, v, color=c, edgecolor=G['ink'], lw=0.7, hatch=h, height=0.62)
-        b.annotate(f'{v}  ({v/len(comp):.0%})', xy=(v, i), xytext=(5, 0),
-                   textcoords='offset points', va='center', fontsize=7.5, color=G['ink'])
-    b.set_yticks(y); b.set_yticklabels([x[0] for x in bars])
-    b.set_xlim(0, max(v for _, v, _, _ in bars) * 1.32)
-    b.set_xlabel('number of studies')
-    b.set_title(f'b  {(allneg+allpos)/len(comp):.0%} of studies report one outcome only',
-                loc='left', fontweight='bold')
-    b.invert_yaxis()
+    # cumulative share on its own axis: the skew as a number the text can cite
+    ax2 = ax.twinx()
+    ax2.plot(rank, cum * 100, color=G['mid'], lw=1.3, ls=(0, (5, 2)), zorder=2)
+    ax2.set_ylim(0, 108)
+    ax2.set_yticks([0, 25, 50, 75, 100])
+    ax2.set_ylabel(pt('cumulative share of all pairs (%)', 'cumulative share (%)'),
+                   color=G['dark'], fontsize=pt(8.5, 7.0))
+    ax2.tick_params(axis='y', colors=G['dark'], labelsize=pt(8, 6.5))
+    ax2.spines['right'].set_visible(True)
+    ax2.spines['right'].set_color(G['dark'])
+    ax2.spines['top'].set_visible(False)
+    # the top-10 label goes left of its marker: to the right the size curve crosses it
+    for k, (dx, ha) in [(10, (-7, 'right')), (100, (7, 'left'))]:
+        ax2.scatter([k], [cum[k - 1] * 100], s=pt(20, 14), facecolor=G['mid'],
+                    edgecolor=G['ink'], lw=0.8, zorder=4)
+        ax2.annotate(pt(f'top {k} studies = {cum[k - 1]:.0%}', f'top {k} = {cum[k - 1]:.0%}'),
+                     xy=(k, cum[k - 1] * 100),
+                     xytext=(dx, -3), textcoords='offset points', ha=ha, va='top',
+                     fontsize=pt(7.2, 6.0), color=G['dark'], zorder=5, bbox=KNOCKOUT)
+
+    ax.set_title(pt(f'{n_studies:,} studies, {n_pairs:,} pairs: {single_share:.0%} of pairs '
+                    'come from studies that report a single outcome',
+                    f'{n_studies:,} studies, {n_pairs:,} pairs; {single_share:.0%} of pairs\n'
+                    'come from single-outcome studies'),
+                 loc='left', fontweight='bold', fontsize=pt(9, 7.2))
     save(fig, 'fig1_dataset_composition')
 
 
 # ----------------------------------------------------------------------------- Fig 2
-def fig2_splits():
-    """The grouping unit, not the model, sets the reported number."""
-    leak, ext = load('leakage_analysis.json'), load('external_validation.json')
-    iedb = [('random', leak.get('random', {}).get('overall_auc')),
-            ('peptide', leak.get('peptide', {}).get('overall_auc')),
-            ('study', leak.get('study', {}).get('overall_auc'))]
-    trap = [('random', ext.get('random', {}).get('pooled_auc')),
-            ('peptide', ext.get('peptide', {}).get('pooled_auc')),
-            ('antigen', ext.get('antigen', {}).get('pooled_auc')),
-            ('organism', ext.get('organism', {}).get('pooled_auc'))]
-
-    fig, axes = plt.subplots(1, 2, figsize=(7.1, 2.9), sharey=True)
-    for ax, data, title in zip(axes, [iedb, trap],
-                               ['a  IEDB (this study)', 'b  TRAP (independent)']):
-        data = [(k, v) for k, v in data if v is not None]
-        x = np.arange(len(data))
-        shades = [G['light'], G['light'], G['mid'], G['dark']][:len(data)]
-        hatches = ['', '', '...', 'xxx'][:len(data)]
-        for i, ((lab, v), c, h) in enumerate(zip(data, shades, hatches)):
-            ax.bar(i, v, color=c, edgecolor=G['ink'], lw=0.8, hatch=h, width=0.62)
-            ax.annotate(f'{v:.3f}', xy=(i, v), xytext=(0, 3), textcoords='offset points',
-                        ha='center', fontsize=8, color=G['ink'])
-        ax.set_xticks(x); ax.set_xticklabels([k for k, _ in data])
-        ax.set_ylim(0.45, 0.99)
-        ax.set_title(title, loc='left', fontweight='bold')
-        ax.set_xlabel('grouping unit for the split')
-        chance_line(ax)
-    axes[0].set_ylabel('pooled AUC')
-    # the point of the figure: the first two bars are the same height. The bracket sits
-    # above the value labels so it cannot collide with them.
-    for ax in axes:
-        ax.plot([0, 0, 1, 1], [0.925, 0.937, 0.937, 0.925], color=G['ink'], lw=0.7,
-                clip_on=False)
-        ax.annotate('same height — no protection', xy=(0.5, 0.945),
-                    ha='center', va='bottom', fontsize=7.5, color=G['ink'])
-    save(fig, 'fig2_grouping_unit')
-
-
-# ----------------------------------------------------------------------------- Fig 3
-def fig3_ceiling():
-    """Measured label reliability, and its robustness."""
+def _ceiling_groups():
+    """Label-reliability estimates, grouped by the robustness check each comes from."""
     rob, base = load('ceiling_robustness.json'), load('label_ceiling.json')
+    groups = []
+
     rows = []
     hl = base.get('reproducibility_auc_ceiling', {})
     if hl:
         rows.append(('majority vote (headline)', hl['mean'], hl['ci95'], True))
-    for k, lab in [('any_positive', 'any-positive'), ('ties_positive', 'ties → positive'),
-                   ('ties_negative', 'ties → negative'),
+    for k, lab in [('any_positive', 'any-positive'), ('ties_positive', 'ties to positive'),
+                   ('ties_negative', 'ties to negative'),
                    ('raw_records_no_aggregation', 'raw records, no aggregation')]:
         r = rob.get('H3_rules', {}).get(k)
         if r:
             rows.append((lab, r['auc'], r.get('auc_ci95'), False))
-    rows.append((None, None, None, None))
+    groups.append(('aggregation rule', rows))
+
+    rows = []
     for k in ['exactly 2 studies', 'exactly 3 studies', '4+ studies']:
         r = rob.get('H2_by_n_studies', {}).get(k)
         if r:
             rows.append((k, r['auc'], r.get('auc_ci95'), k == 'exactly 2 studies'))
-    rows.append((None, None, None, None))
+    groups.append(('how often the pair was retested', rows))
+
+    rows = []
     for k, r in (rob.get('H5_slices') or {}).items():
         if r:
             rows.append((k.replace('assay::', '').replace('_', ' '), r['auc'],
                          r.get('auc_ci95'), False))
+    groups.append(('assay family and HLA locus', rows))
 
-    fig, ax = plt.subplots(figsize=(7.1, 0.3 * len(rows) + 1.5))
-    ypos, labels = [], []
-    for i, (lab, v, ci, emph) in enumerate(rows):
-        y = len(rows) - i
-        if lab is None:
-            continue
-        ypos.append(y); labels.append(lab)
-        if ci:
-            ax.plot(ci, [y, y], color=G['ink'], lw=1.0, solid_capstyle='butt')
-        ax.scatter([v], [y], s=34 if emph else 22, zorder=3,
-                   facecolor=G['ink'] if emph else 'white',
-                   edgecolor=G['ink'], lw=1.0)
-        ax.annotate(f'{v:.3f}', xy=(v, y), xytext=(0, 6), textcoords='offset points',
-                    ha='center', fontsize=7.2, color=G['ink'])
-    ax.axvspan(0.85, 0.90, color=G['light'], alpha=0.75, zorder=0)
-    ax.annotate('published claims\n0.85–0.90', xy=(0.875, max(ypos) + 0.4),
-                ha='center', va='bottom', fontsize=7.2, color=G['ink'])
-    ax.axvline(CHANCE, color=G['ink'], lw=0.8, ls=(0, (4, 3)), zorder=1)
-    ax.annotate('chance', xy=(CHANCE, min(ypos) - 0.6), ha='center', fontsize=7,
-                color=G['ink'])
-    ax.set_yticks(ypos); ax.set_yticklabels(labels)
-    ax.set_xlim(0.42, 0.95)
-    ax.set_ylim(min(ypos) - 1.1, max(ypos) + 1.5)
-    ax.set_xlabel('AUC of one study’s outcome predicting another’s, on the same pair')
-    ax.set_title('Measured reliability of the labels, and its robustness',
-                 loc='left', fontweight='bold')
-    ax.spines['left'].set_visible(False)
-    ax.tick_params(axis='y', length=0)
-    save(fig, 'fig3_label_ceiling')
+    return [(g, rs) for g, rs in groups if rs]
 
 
-# ----------------------------------------------------------------------------- Fig 4
-def fig4_models():
-    """Predictors on the held-out test split, pooled vs within-allele."""
-    eb = load('external_baselines.json').get('all', {})
-    order = ['ours', 'gbm_baseline', 'deepimmuno', 'allele_prior_baseline',
-             'bigmhc_im', 'mixmhcpred']
-    pretty = {'ours': 'this study', 'gbm_baseline': 'gradient boosting',
-              'deepimmuno': 'DeepImmuno', 'allele_prior_baseline': 'allele prior\n(no peptide)',
-              'bigmhc_im': 'BigMHC_IM', 'mixmhcpred': 'MixMHCpred\n(binding only)'}
-    rows = [(pretty[k], eb[k]['auc'], eb[k].get('within_allele'))
-            for k in order if k in eb]
-
-    fig, ax = plt.subplots(figsize=(7.1, 3.0))
-    x = np.arange(len(rows)); w = 0.37
-    pooled = [r[1] for r in rows]
-    within = [r[2] if r[2] else np.nan for r in rows]
-    ax.bar(x - w / 2, pooled, w, color=G['light'], edgecolor=G['ink'], lw=0.8,
-           label='pooled AUC')
-    ax.bar(x + w / 2, within, w, color=G['dark'], edgecolor=G['ink'], lw=0.8,
-           hatch='///', label='within-allele AUC')
-    for i, (p, v) in enumerate(zip(pooled, within)):
-        ax.annotate(f'{p:.3f}', xy=(i - w / 2, p), xytext=(0, 3),
-                    textcoords='offset points', ha='center', fontsize=7, color=G['ink'])
-        if not np.isnan(v):
-            ax.annotate(f'{v:.3f}', xy=(i + w / 2, v), xytext=(0, 3),
-                        textcoords='offset points', ha='center', fontsize=7, color=G['ink'])
-    ax.set_xticks(x); ax.set_xticklabels([r[0] for r in rows])
-    ax.set_ylim(0.4, 0.95)
-    ax.set_ylabel('AUC')
-    chance_line(ax)
-    ax.legend(frameon=False, loc='upper right', ncol=2)
-    ax.set_title('A peptide-blind baseline outscores two published predictors',
-                 loc='left', fontweight='bold')
-    save(fig, 'fig4_model_comparison')
-
-
-# ----------------------------------------------------------------------------- Fig 5
-def fig5_contamination():
-    """Seen vs unseen: training-set overlap inflates reported performance."""
-    fv = load('fair_vs_deepimmuno.json')
-    lb = load('lung_benchmark.json')
-    pairs = []
-    s = fv.get('seen_by_deepimmuno', {}).get('deepimmuno', {})
-    u = fv.get('unseen_by_deepimmuno', {}).get('deepimmuno', {})
-    if s and u:
-        pairs.append(('DeepImmuno\n(37.5% overlap)', s['auc'], u['auc']))
-    pairs.append(('BigMHC_IM\n(26.5% overlap)', 0.807, 0.549))
-
-    fig, ax = plt.subplots(figsize=(4.6, 3.0))
-    for i, (lab, seen, unseen) in enumerate(pairs):
-        ax.plot([0, 1], [seen, unseen], color=G['ink'], lw=1.1, zorder=2,
-                marker='o', ms=6, mfc='white', mec=G['ink'], mew=1.1)
-        ax.annotate(f'{seen:.3f}', xy=(0, seen), xytext=(-6, 0),
-                    textcoords='offset points', ha='right', va='center', fontsize=7.5)
-        ax.annotate(f'{unseen:.3f}', xy=(1, unseen), xytext=(6, 0),
-                    textcoords='offset points', ha='left', va='center', fontsize=7.5)
-        ax.annotate(lab, xy=(0.5, (seen + unseen) / 2), xytext=(0, 7),
-                    textcoords='offset points', ha='center', fontsize=7.5, color=G['ink'])
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['pairs it\ntrained on', 'pairs it\nnever saw'])
-    ax.set_xlim(-0.42, 1.42)
-    ax.set_ylim(0.45, 0.88)
-    ax.set_ylabel('AUC')
-    chance_line(ax)
-    ax.set_title('Training-set overlap', loc='left', fontweight='bold')
-    save(fig, 'fig5_contamination')
-
-
-# ----------------------------------------------------------------------------- Fig 6
-def fig6_honest():
-    """Leakage-free performance against the measured ceiling."""
+def _model_rows():
+    """Within-study, within-allele AUC per training scheme, bootstrapped over studies."""
     df = pd.read_csv(BASE_DIR / 'data' / 'processed' / 'dataset.csv')
     variants = [('ranking (no features)', 'oof_study_ranking_nofeat.npy'),
                 ('ranking (+ features)', 'oof_study_ranking.npy'),
@@ -299,43 +254,118 @@ def fig6_honest():
         a = np.array([roc_auc_score(g['label'], g['_s']) for g in groups])
         boot = [a[rng.integers(0, len(a), len(a))].mean() for _ in range(2000)]
         rows.append((lab, a.mean(), np.percentile(boot, 2.5), np.percentile(boot, 97.5)))
+    return rows
 
-    fig, ax = plt.subplots(figsize=(7.1, 0.42 * len(rows) + 1.6))
-    ceil = load('label_ceiling.json').get('reproducibility_auc_ceiling', {}).get('mean', 0.637)
-    cons = 0.681
-    ax.axvspan(ceil, cons, color=G['light'], alpha=0.8, zorder=0)
-    ax.annotate('measured label reliability\n0.637 – 0.681', xy=((ceil + cons) / 2, len(rows) + 0.55),
-                ha='center', va='bottom', fontsize=7.2, color=G['ink'])
-    ax.axvspan(0.85, 0.90, color=G['mid'], alpha=0.55, zorder=0)
-    ax.annotate('published\nclaims', xy=(0.875, len(rows) + 0.55), ha='center',
-                va='bottom', fontsize=7.2, color=G['ink'])
+
+def fig2_ceiling_and_performance():
+    """What the labels can support, and what a leakage-free model achieves.
+
+    Both panels are AUC on one scale, so the two reference bands — the measured
+    reliability of the labels and the 0.85-0.90 range reported in the literature — run
+    through both and are labelled once. That shared geometry is the argument, and it is
+    why these are one figure rather than two: panel (a) establishes the light band, and
+    panel (b) is read against it. The underlying numbers are tabulated in 3.8; what a
+    table cannot place beside them is the distance drawn at the foot of panel (b).
+    """
+    groups = _ceiling_groups()
+    rows = _model_rows()
+
+    gap = pt(1.0, 0.5)
+    # a header line per group, plus a gap between groups; the narrow variant uses a
+    # half-height gap so the figure still fits beside a column of text
+    slots_a = sum(len(rs) for _, rs in groups) + len(groups) * (1 + gap)
+    slots_b = len(rows) + 1.5          # the rows, plus the strip the gap arrow sits in
+    pitch = pt(0.27, 0.185)
+    head = pt(2.0, 1.75)               # band labels, shared axis, two panel titles
+
+    fig, (axa, axb) = plt.subplots(
+        2, 1, sharex=True, figsize=(width(), pitch * (slots_a + slots_b) + head),
+        gridspec_kw={'height_ratios': [slots_a, slots_b], 'hspace': pt(0.22, 0.30)})
+
+    ceil_lo = load('label_ceiling.json').get(
+        'reproducibility_auc_ceiling', {}).get('mean', 0.637)
+    ceil_hi = 0.681   # conservative bound: pairs assayed by exactly two studies (3.3)
+
+    # the bands and the chance line carry across both panels; only the top one is labelled
+    for ax in (axa, axb):
+        ax.axvspan(ceil_lo, ceil_hi, color=G['light'], alpha=0.8, zorder=0)
+        ax.axvspan(*CLAIMS, color=G['mid'], alpha=0.8, zorder=0)
+        ax.axvline(CHANCE, color=G['ink'], lw=0.8, ls=(0, (4, 3)), zorder=1)
+        ax.set_xlim(0.42, 0.95)
+        ax.spines['left'].set_visible(False)
+        ax.tick_params(axis='y', length=0)
+
+    # ----- panel a: how reliable the labels are
+    ypos, labels = [], []
+    y = slots_a
+    for gname, rs in groups:
+        axa.annotate(gname, xy=(0, y), xycoords=('axes fraction', 'data'),
+                     xytext=(0, -1), textcoords='offset points', ha='left', va='center',
+                     fontsize=pt(7.6, 6.2), style='italic', color=G['dark'], zorder=5,
+                     bbox=KNOCKOUT)
+        y -= 1
+        for lab, v, ci, emph in rs:
+            ypos.append(y)
+            labels.append(lab)
+            forest_row(axa, y, v, ci, emph)
+            y -= 1
+        y -= gap
+
+    ytop = slots_a + 0.4
+    axa.annotate(pt(f'what the labels\ncan support\n{ceil_lo:.3f}-{ceil_hi:.3f}',
+                    f'labels can\nsupport\n{ceil_lo:.2f}-{ceil_hi:.2f}'),
+                 xy=((ceil_lo + ceil_hi) / 2, ytop), ha='center', va='bottom',
+                 fontsize=pt(7.2, 6.0), color=G['ink'])
+    axa.annotate(pt('what is reported\nin the literature\n0.85-0.90',
+                    'reported in\nliterature\n0.85-0.90'),
+                 xy=(sum(CLAIMS) / 2, ytop), ha='center', va='bottom',
+                 fontsize=pt(7.2, 6.0), color=G['ink'])
+    axa.annotate('chance', xy=(CHANCE, ytop), ha='center', va='bottom',
+                 fontsize=pt(7.2, 6.0), color=G['ink'], zorder=5, bbox=KNOCKOUT)
+    axa.set_yticks(ypos)
+    axa.set_yticklabels(labels, fontsize=pt(8, 6.2))
+    axa.set_ylim(y + 0.5, ytop + pt(2.4, 3.0))
+    axa.set_title(pt('a  Reliability of the labels: one study’s outcome predicting '
+                     'another’s on the same pair',
+                     'a  Reliability of the labels: one study’s\n'
+                     '    outcome predicting another’s'),
+                  loc='left', fontweight='bold', fontsize=pt(9, 7.2))
+
+    # ----- panel b: what a leakage-free model achieves against it
+    n = len(rows)
     for i, (lab, v, lo, hi) in enumerate(rows):
-        y = len(rows) - i
-        ax.plot([lo, hi], [y, y], color=G['ink'], lw=1.0)
-        ax.scatter([v], [y], s=32, zorder=3, facecolor=G['ink'] if i == 0 else 'white',
-                   edgecolor=G['ink'], lw=1.0)
-        ax.annotate(f'{v:.3f}', xy=(v, y), xytext=(0, 6), textcoords='offset points',
-                    ha='center', fontsize=7.2, color=G['ink'])
-    ax.axvline(CHANCE, color=G['ink'], lw=0.8, ls=(0, (4, 3)), zorder=1)
-    ax.annotate('chance', xy=(CHANCE, 0.35), ha='center', fontsize=7, color=G['ink'])
-    ax.set_yticks(range(1, len(rows) + 1))
-    ax.set_yticklabels([r[0] for r in rows][::-1])
-    ax.set_xlim(0.44, 0.95)
-    ax.set_ylim(0.1, len(rows) + 1.5)
-    ax.set_xlabel('within-study, within-allele AUC (bootstrap over studies)')
-    ax.set_title('Leakage-free performance against the measured ceiling',
-                 loc='left', fontweight='bold')
-    ax.spines['left'].set_visible(False)
-    ax.tick_params(axis='y', length=0)
-    save(fig, 'fig6_honest_performance')
+        forest_row(axb, n - i, v, (lo, hi), emphasis=(i == 0))
+
+    best = rows[0][1] if rows else 0.573
+    ygap = 0.2
+    axb.annotate('', xy=(CLAIMS[0], ygap), xytext=(best, ygap),
+                 arrowprops=dict(arrowstyle='<->, head_width=0.16', lw=0.8,
+                                 color=G['ink'], shrinkA=0, shrinkB=0))
+    axb.annotate(pt(f'{CLAIMS[0] - best:.2f} AUC between the best leakage-free result '
+                    'and the reported range',
+                    f'{CLAIMS[0] - best:.2f} AUC unaccounted for'),
+                 xy=((best + CLAIMS[0]) / 2, ygap), xytext=(0, 4),
+                 textcoords='offset points', ha='center', va='bottom',
+                 fontsize=pt(7.2, 6.0), color=G['ink'])
+
+    axb.set_yticks(range(1, n + 1))
+    axb.set_yticklabels([r[0] for r in rows][::-1], fontsize=pt(8, 6.2))
+    axb.set_ylim(-0.45, n + 0.9)
+    axb.set_xlabel('AUC', fontsize=pt(8.5, 7.0))
+    axb.tick_params(axis='x', labelsize=pt(8, 6.5))
+    axb.set_title(pt('b  Leakage-free model performance: within-study, within-allele AUC',
+                     'b  Leakage-free model performance:\n    within-study, within-allele AUC'),
+                  loc='left', fontweight='bold', fontsize=pt(9, 7.2))
+
+    save(fig, 'fig2_ceiling_and_performance')
 
 
 if __name__ == '__main__':
     print('rendering figures ->', FIGDIR, flush=True)
-    for fn in (fig1_dataset, fig2_splits, fig3_ceiling, fig4_models,
-               fig5_contamination, fig6_honest):
-        try:
-            fn()
-        except Exception as e:
-            print(f'  !! {fn.__name__} failed: {type(e).__name__}: {e}', flush=True)
+    for NARROW in (False, True):
+        for fn in (fig1_dataset, fig2_ceiling_and_performance):
+            try:
+                fn()
+            except Exception as e:
+                print(f'  !! {fn.__name__} failed: {type(e).__name__}: {e}', flush=True)
     print('done')
