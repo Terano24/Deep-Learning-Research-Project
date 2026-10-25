@@ -2,8 +2,9 @@
 H1: compare against published external predictors on our held-out test split.
 
 Baselines
-  DeepImmuno    the model the original project used (its checkpoint is byte-identical
-                to ours), trained on IEDB T-cell assays
+  DeepImmuno    the published predictor, scored through its own released checkpoint
+                (models/CNN_WEIGHT_OPSI; see src/models/deepimmuno.py). Not to be
+                confused with cnn_retrained, which is that architecture trained by us.
   BigMHC_IM     ensemble of 7 pan-allelic networks, presentation-pretrained then
                 transfer-learned on immunogenicity (Albert et al. 2023)
   MixMHCpred    binding/presentation only, no immunogenicity training (Gfeller lab).
@@ -17,7 +18,6 @@ and on the subset DeepImmuno was not trained on.
 Run:  python -m src.analysis.external_baselines
 """
 import json
-import re
 from pathlib import Path
 
 import numpy as np
@@ -28,69 +28,41 @@ from src.analysis.confounds import within_allele_auc, paired_bootstrap
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 RESULTS = BASE_DIR / 'results'
-SCRATCH = Path('C:/Users/Terano/AppData/Local/Temp/claude/'
-               'c--Users-Terano-OneDrive-Documents-CNN-Lung-Cancer-Deep-Learning-Research-Project/'
-               '02bbbf46-fefb-4293-9822-36532cdb812c/scratchpad')
-DI_TRAIN = SCRATCH / 'di' / 'di_train.csv'
+EXTERNAL = BASE_DIR / 'data' / 'external'
+DI_TRAIN = EXTERNAL / 'deepimmuno_train.csv'
 
 
-def to_colon(h):
-    m = re.match(r'^HLA-([ABC])\*(\d\d)(\d\d)$', h)
-    return f'HLA-{m.group(1)}*{m.group(2)}:{m.group(3)}' if m else None
 
-
-def load_bigmhc(df):
-    p = SCRATCH / 'bigmhc_full.prd'
+def load_external(df, name, column):
+    """Attach a published predictor's scores from data/external/ (see its README)."""
+    p = EXTERNAL / name
     if not p.exists():
+        print(f'  {name} not found, skipping {column}')
         return df
-    b = pd.read_csv(p)
-    b = b.rename(columns={'pep': 'peptide', 'BigMHC_IM': 'bigmhc_im'})
-    b['HLA'] = b['mhc'].str.replace(':', '', regex=False)
-    return df.merge(b[['peptide', 'HLA', 'bigmhc_im']].drop_duplicates(),
-                    on=['peptide', 'HLA'], how='left')
-
-
-def load_mixmhcpred(df):
-    """One MixMHCpred run per allele; take that allele's own score column."""
-    rows = []
-    for f in sorted((SCRATCH / 'mix').glob('*.out')):
-        short = f.stem                                   # e.g. A0201
-        hla = f'HLA-{short[0]}*{short[1:]}'
-        try:
-            tab = pd.read_csv(f, sep='\t', comment='#')
-        except Exception:
-            continue
-        col = next((c for c in tab.columns if c.lower().startswith('score_')
-                    and short.lower() in c.lower()), None)
-        if col is None:
-            col = next((c for c in tab.columns if c.lower() == 'score_bestallele'), None)
-        if col is None or 'Peptide' not in tab.columns:
-            continue
-        rows.append(pd.DataFrame({'peptide': tab['Peptide'], 'HLA': hla,
-                                  'mixmhcpred': tab[col]}))
-    if not rows:
-        return df
-    mix = pd.concat(rows, ignore_index=True).drop_duplicates(['peptide', 'HLA'])
-    return df.merge(mix, on=['peptide', 'HLA'], how='left')
+    e = pd.read_csv(p)[['peptide', 'HLA', column]].drop_duplicates(['peptide', 'HLA'])
+    return df.merge(e, on=['peptide', 'HLA'], how='left')
 
 
 def metrics(y, p):
-    pred = (p >= np.median(p)).astype(int)      # median split: baselines are not calibrated
     return {'n': int(len(y)), 'n_pos': int(y.sum()),
             'auc': float(roc_auc_score(y, p)),
             'pr_auc': float(average_precision_score(y, p))}
 
 
 def main():
-    df = pd.read_csv(RESULTS / 'test_predictions.csv').rename(columns={'cnn': 'deepimmuno'})
+    # 'deepimmuno' here is DeepImmuno's released checkpoint, scored in train.py via
+    # src/models/deepimmuno.py. 'cnn_retrained' is our own model on the same
+    # architecture. They are separate columns and neither is renamed into the other.
+    df = pd.read_csv(RESULTS / 'test_predictions.csv')
     ours = pd.read_csv(RESULTS / 'improve_test_predictions_pretrained_lung_feat.csv')
     df = df.merge(ours.rename(columns={'pred': 'ours'})[['peptide', 'HLA', 'ours']],
                   on=['peptide', 'HLA'], how='inner')
-    df = load_bigmhc(df)
-    df = load_mixmhcpred(df)
+    df = load_external(df, 'bigmhc_im_test.csv', 'bigmhc_im')
+    df = load_external(df, 'mixmhcpred_test.csv', 'mixmhcpred')
 
     models = [m for m in ['ours', 'bigmhc_im', 'deepimmuno', 'mixmhcpred',
-                          'gbm_baseline', 'allele_prior_baseline'] if m in df]
+                          'gbm_baseline', 'allele_prior_baseline',
+                          'cnn_retrained'] if m in df]
     missing = {m: int(df[m].isna().sum()) for m in models}
     print('test pairs:', len(df))
     print('missing scores per model:', {k: v for k, v in missing.items() if v})

@@ -14,3 +14,6 @@ data/raw/
 *.ckpt
 *.h5
 *.weights
+
+# the external predictor outputs are inputs to the published analyses, not derived data
+!data/external/*.csv

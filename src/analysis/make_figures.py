@@ -198,13 +198,15 @@ def fig1_dataset():
 # ----------------------------------------------------------------------------- Fig 2
 def _ceiling_groups():
     """Label-reliability estimates, grouped by the robustness check each comes from."""
-    rob, base = load('ceiling_robustness.json'), load('label_ceiling.json')
+    rob = load('ceiling_robustness.json')
     groups = []
 
     rows = []
-    hl = base.get('reproducibility_auc_ceiling', {})
+    # the headline comes from the same file as the other rows: label_ceiling.py computes
+    # it too, but from an independent RNG, and the two differ in the fourth decimal
+    hl = rob.get('H3_rules', {}).get('majority')
     if hl:
-        rows.append(('majority vote (headline)', hl['mean'], hl['ci95'], True))
+        rows.append(('majority vote (headline)', hl['auc'], hl.get('auc_ci95'), True))
     for k, lab in [('any_positive', 'any-positive'), ('ties_positive', 'ties to positive'),
                    ('ties_negative', 'ties to negative'),
                    ('raw_records_no_aggregation', 'raw records, no aggregation')]:
@@ -282,9 +284,13 @@ def fig2_ceiling_and_performance():
         2, 1, sharex=True, figsize=(width(), pitch * (slots_a + slots_b) + head),
         gridspec_kw={'height_ratios': [slots_a, slots_b], 'hspace': pt(0.22, 0.30)})
 
-    ceil_lo = load('label_ceiling.json').get(
-        'reproducibility_auc_ceiling', {}).get('mean', 0.637)
-    ceil_hi = 0.681   # conservative bound: pairs assayed by exactly two studies (3.3)
+    # both edges of the band are the two filled markers in panel (a), read from the
+    # same file so the markers land exactly on them
+    rob = load('ceiling_robustness.json')
+    h3 = rob.get('H3_rules', {}).get('majority') or {}
+    h2 = rob.get('H2_by_n_studies', {}).get('exactly 2 studies') or {}
+    ceil_lo = h3.get('auc', 0.637)
+    ceil_hi = h2.get('auc', 0.681)   # conservative bound: pairs assayed by exactly two
 
     # the bands and the chance line carry across both panels; only the top one is labelled
     for ax in (axa, axb):

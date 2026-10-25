@@ -90,7 +90,14 @@ def main():
             P = len(pg)
             if N <= P:
                 continue
-            auc = float(np.mean((N - pg['Rank']) / (N - P)))
+            # Mann-Whitney: a positive at rank r outranks N - r candidates, but some of
+            # those are the patient's other positives and must not be counted as
+            # negatives it beat. Sorting the positives by rank, the one lying k-th from
+            # the bottom has P - k positives below it. Omitting that term lets the
+            # estimate exceed 1.0, which it did for half the patients.
+            r = np.sort(pg['Rank'].values)
+            below = (N - r) - (P - np.arange(1, P + 1))
+            auc = float(np.mean(below) / (N - P))
             rows.append({'patient': p, 'auc': auc, 'n_pos': P, 'n_cand': N})
         per = pd.DataFrame(rows).merge(stats[['patient', 'cancer']], on='patient', how='left')
         if per.empty:

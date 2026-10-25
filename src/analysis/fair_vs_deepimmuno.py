@@ -1,11 +1,18 @@
 """
 A fair head-to-head against DeepImmuno.
 
-models/CNN_WEIGHT_OPSI is byte-identical to DeepImmuno's published checkpoint
-(cnn_model_331_3_7), so every "cnn" column in our results IS DeepImmuno. That makes the
-comparison easy but raises a fairness problem in DeepImmuno's favour: it was trained on
-IEDB T-cell assays, and our test split is drawn from IEDB too, so some of our test pairs
-were in its training data. Scoring it there measures memorisation, not prediction.
+DeepImmuno is scored through its own released checkpoint (models/CNN_WEIGHT_OPSI, which
+is byte-identical to cnn_model_331_3_7) by src/models/deepimmuno.py, and arrives here as
+the 'deepimmuno' column of test_predictions.csv.
+
+Note for anyone editing this file: 'cnn_retrained' in that same table is OUR model on
+DeepImmuno's architecture, trained on our split. It is a different set of weights and
+scores very differently (0.792 against 0.606 on the held-out split). An earlier version
+of this script renamed one into the other and reported ours as theirs.
+
+Scoring DeepImmuno on our split raises a fairness problem in its favour: it was trained
+on IEDB T-cell assays, and our test split is drawn from IEDB too, so some of our test
+pairs were in its training data. Scoring it there measures memorisation, not prediction.
 
 This script quantifies the overlap and re-runs the comparison on the subset DeepImmuno
 provably never saw, which is the only honest head-to-head.
@@ -23,14 +30,12 @@ from src.analysis.confounds import within_allele_auc, paired_bootstrap
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 RESULTS = BASE_DIR / 'results'
-DI_TRAIN = Path('C:/Users/Terano/AppData/Local/Temp/claude/'
-                'c--Users-Terano-OneDrive-Documents-CNN-Lung-Cancer-Deep-Learning-Research-Project/'
-                '02bbbf46-fefb-4293-9822-36532cdb812c/scratchpad/di/di_train.csv')
-MODELS = ['ours', 'deepimmuno', 'gbm_baseline', 'allele_prior_baseline']
+DI_TRAIN = BASE_DIR / 'data' / 'external' / 'deepimmuno_train.csv'
+MODELS = ['ours', 'deepimmuno', 'cnn_retrained', 'gbm_baseline', 'allele_prior_baseline']
 
 
 def load():
-    base = pd.read_csv(RESULTS / 'test_predictions.csv').rename(columns={'cnn': 'deepimmuno'})
+    base = pd.read_csv(RESULTS / 'test_predictions.csv')
     ours = pd.read_csv(RESULTS / 'improve_test_predictions_pretrained_lung_feat.csv')
     ours = ours.rename(columns={'pred': 'ours'})[['peptide', 'HLA', 'ours']]
     return base.merge(ours, on=['peptide', 'HLA'], how='inner')

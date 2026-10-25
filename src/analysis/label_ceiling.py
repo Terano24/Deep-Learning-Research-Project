@@ -29,7 +29,8 @@ RESULTS = BASE_DIR / 'results'
 RAW = BASE_DIR / 'data' / 'raw' / 'iedb_tcell_mhc1.csv'
 HLA = BASE_DIR / 'data' / 'raw' / 'ParatopeIMGTopsi.txt'
 SEED = 42
-N_DRAWS = 200          # random study pairings, to avoid depending on one arbitrary draw
+N_DRAWS = 1000         # random study pairings; enough that the mean is stable to 4 dp
+N_BOOT = 2000          # bootstrap resamples OF THE PAIRS, for the interval
 
 
 def load():
@@ -65,27 +66,52 @@ def main():
     print(f'pairs in >=2 studies    : {len(multi):,}\n')
 
     rng = np.random.default_rng(SEED)
-    groups = [g for _, g in sl.groupby(['linear_sequence', 'HLA'])]
-    agrees, kappas, aucs, pos_rates = [], [], [], []
-    for _ in range(N_DRAWS):
-        a, b = [], []
-        for g in groups:
-            i, j = rng.choice(len(g), 2, replace=False)
-            a.append(g['label'].iat[i])
-            b.append(g['label'].iat[j])
-        a, b = np.array(a), np.array(b)
-        agrees.append((a == b).mean())
+    groups = [g['label'].values for _, g in sl.groupby(['linear_sequence', 'HLA'])]
+
+    # Every ordered pair of studies within each pair, flattened, so that drawing a
+    # random "study A vs study B" assignment for all pairs at once is one gather.
+    flat = np.concatenate([[(g[i], g[j]) for i in range(len(g)) for j in range(len(g))
+                            if i != j] for g in groups])
+    counts = np.array([len(g) * (len(g) - 1) for g in groups])
+    offsets = np.concatenate([[0], np.cumsum(counts)[:-1]])
+    n_groups = len(groups)
+
+    def draw(group_idx):
+        """One A-vs-B assignment for the given pairs."""
+        picked = offsets[group_idx] + (rng.random(len(group_idx)) * counts[group_idx]).astype(int)
+        return flat[picked, 0], flat[picked, 1]
+
+    def stats(a, b):
+        out = {'agreement': float((a == b).mean()), 'positive_rate': float(b.mean())}
         if len(set(a)) > 1 and len(set(b)) > 1:
-            kappas.append(cohen_kappa_score(a, b))
-            aucs.append(roc_auc_score(b, a))
-        pos_rates.append(b.mean())
+            out['kappa'] = float(cohen_kappa_score(a, b))
+            out['auc'] = float(roc_auc_score(b, a))
+        return out
 
-    def ci(v):
-        return float(np.mean(v)), float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))
+    # Point estimates: average over N_DRAWS re-pairings of the complete set, so the
+    # headline does not depend on one arbitrary draw.
+    all_pairs = np.arange(n_groups)
+    point = [stats(*draw(all_pairs)) for _ in range(N_DRAWS)]
 
-    ag, ag_lo, ag_hi = ci(agrees)
-    kp, kp_lo, kp_hi = ci(kappas)
-    au, au_lo, au_hi = ci(aucs)
+    # Interval: resample the PAIRS with replacement, with a fresh re-pairing each time.
+    # The previous version took percentiles across re-pairings of the same fixed set of
+    # pairs, which measures only how the study assignment is drawn and ignores sampling
+    # error over pairs; it gave intervals about half this width.
+    boot = [stats(*draw(rng.integers(0, n_groups, n_groups))) for _ in range(N_BOOT)]
+
+    def ci(key):
+        m = float(np.mean([d[key] for d in point if key in d]))
+        v = [d[key] for d in boot if key in d]
+        return m, float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))
+
+    agrees = [d['agreement'] for d in point]
+    kappas = [d['kappa'] for d in point if 'kappa' in d]
+    aucs = [d['auc'] for d in point if 'auc' in d]
+    pos_rates = [d['positive_rate'] for d in point]
+
+    ag, ag_lo, ag_hi = ci('agreement')
+    kp, kp_lo, kp_hi = ci('kappa')
+    au, au_lo, au_hi = ci('auc')
     print('Does one study\'s result predict another study\'s, on the same peptide-HLA pair?')
     print(f'  agreement      {ag:.3f}  [{ag_lo:.3f}, {ag_hi:.3f}]')
     print(f'  Cohen\'s kappa  {kp:.3f}  [{kp_lo:.3f}, {kp_hi:.3f}]   (0 = chance, 1 = perfect)')

@@ -30,7 +30,8 @@ RESULTS = BASE_DIR / 'results'
 RAW = BASE_DIR / 'data' / 'raw' / 'iedb_tcell_mhc1.csv'
 HLA = BASE_DIR / 'data' / 'raw' / 'ParatopeIMGTopsi.txt'
 SEED = 42
-N_DRAWS = 200
+N_DRAWS = 1000         # random study pairings; enough that the mean is stable to 4 dp
+N_BOOT = 1000          # bootstrap resamples OF THE PAIRS, for the intervals
 
 
 def load():
@@ -74,18 +75,27 @@ def _as_ragged(sub, key='pair', val='label'):
     return [labels[bounds[i]:bounds[i + 1]] for i in range(len(starts))]
 
 
-def _draw_stats(groups, n_draws, rng):
-    """Repeatedly pick two observations per pair; return agreement/kappa/AUC per draw."""
+def _draw_stats(groups, n_draws, rng, resample=False):
+    """Repeatedly pick two observations per pair; return agreement/kappa/AUC per draw.
+
+    With resample=True the pairs themselves are drawn with replacement, which is what
+    an interval needs: taking percentiles across re-pairings of one fixed set of pairs
+    measures only how the two studies are chosen and ignores sampling error over pairs,
+    giving intervals roughly half as wide as they should be.
+    """
     sizes = np.array([len(g) for g in groups])
     flat = np.concatenate(groups)
     offs = np.concatenate([[0], np.cumsum(sizes)[:-1]])
+    n = len(groups)
     ag, kp, au = [], [], []
     for _ in range(n_draws):
-        i = (rng.random(len(groups)) * sizes).astype(int)
-        j = (rng.random(len(groups)) * (sizes - 1)).astype(int)
+        gi = rng.integers(0, n, n) if resample else np.arange(n)
+        s, o = sizes[gi], offs[gi]
+        i = (rng.random(n) * s).astype(int)
+        j = (rng.random(n) * (s - 1)).astype(int)
         j += (j >= i)                      # pick a different index without a loop
-        a = flat[offs + i]
-        b = flat[offs + j]
+        a = flat[o + i]
+        b = flat[o + j]
         ag.append(float((a == b).mean()))
         if a.min() != a.max() and b.min() != b.max():
             kp.append(cohen_kappa_score(a, b))
@@ -100,13 +110,15 @@ def reproducibility(sl, n_draws=N_DRAWS, seed=SEED, min_studies=2):
     groups = [g for g in _as_ragged(sub) if len(g) >= 2]
     if len(groups) < 50:
         return None
-    ag, kp, au = _draw_stats(groups, n_draws, np.random.default_rng(seed))
-    if not au:
+    rng = np.random.default_rng(seed)
+    ag, kp, au = _draw_stats(groups, n_draws, rng)                   # point estimates
+    _, _, au_b = _draw_stats(groups, N_BOOT, rng, resample=True)     # interval
+    if not au or not au_b:
         return None
     return {'n_pairs': len(groups), 'agreement': float(np.mean(ag)),
             'kappa': float(np.mean(kp)),
             'auc': float(np.mean(au)),
-            'auc_ci95': [float(np.percentile(au, 2.5)), float(np.percentile(au, 97.5))],
+            'auc_ci95': [float(np.percentile(au_b, 2.5)), float(np.percentile(au_b, 97.5))],
             'positive_rate': float(np.mean([g.mean() for g in groups]))}
 
 
@@ -143,23 +155,34 @@ def main():
     by_pair = [[g['label'].to_numpy() for _, g in p.groupby('reference_id')]
                for _, p in recs.groupby('pair')]
     by_pair = [p for p in by_pair if len(p) >= 2]
-    ag, au = [], []
-    for _ in range(N_DRAWS):
-        a = np.empty(len(by_pair), int)
-        b = np.empty(len(by_pair), int)
-        for k, studies in enumerate(by_pair):
+    def raw_draw(resample):
+        n = len(by_pair)
+        order = rng.integers(0, n, n) if resample else np.arange(n)
+        a = np.empty(n, int)
+        b = np.empty(n, int)
+        for k, gi in enumerate(order):
+            studies = by_pair[gi]
             i = int(rng.random() * len(studies))
             j = int(rng.random() * (len(studies) - 1))
             j += (j >= i)
             si, sj = studies[i], studies[j]
             a[k] = si[int(rng.random() * len(si))]
             b[k] = sj[int(rng.random() * len(sj))]
+        return a, b
+
+    ag, au, au_b = [], [], []
+    for _ in range(N_DRAWS):
+        a, b = raw_draw(False)
         ag.append((a == b).mean())
         if a.min() != a.max() and b.min() != b.max():
             au.append(roc_auc_score(b, a))
+    for _ in range(N_BOOT):                      # interval resamples the pairs
+        a, b = raw_draw(True)
+        if a.min() != a.max() and b.min() != b.max():
+            au_b.append(roc_auc_score(b, a))
     out['H3_rules']['raw_records_no_aggregation'] = {
         'n_pairs': len(by_pair), 'agreement': float(np.mean(ag)), 'auc': float(np.mean(au)),
-        'auc_ci95': [float(np.percentile(au, 2.5)), float(np.percentile(au, 97.5))]}
+        'auc_ci95': [float(np.percentile(au_b, 2.5)), float(np.percentile(au_b, 97.5))]}
     print(f'  {"raw records (no aggregation)":>30}: n={len(by_pair):>5}  '
           f'AUC {np.mean(au):.3f}  agree {np.mean(ag):.3f}')
 

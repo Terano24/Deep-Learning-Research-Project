@@ -21,7 +21,6 @@ import os
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
 import json
-import re
 from pathlib import Path
 
 import numpy as np
@@ -34,59 +33,24 @@ from src.analysis.within_study import per_study_auc
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 RESULTS = BASE_DIR / 'results'
-SCRATCH = Path('C:/Users/Terano/AppData/Local/Temp/claude/'
-               'c--Users-Terano-OneDrive-Documents-CNN-Lung-Cancer-Deep-Learning-Research-Project/'
-               '02bbbf46-fefb-4293-9822-36532cdb812c/scratchpad')
+EXTERNAL = BASE_DIR / 'data' / 'external'
 MIN_GROUP = 10
 
 
 def score_deepimmuno(df):
     """DeepImmuno's published checkpoint, applied to every lung pair."""
-    import numpy as np
-    from src.models.cnn_model import arsitekturCNN
-    from src.data.processing import (HLA_Dictionary, dictionary, construct_aaindex,
-                                     peptide_iterate, hla_iterate)
-    after_pca = np.loadtxt(BASE_DIR / 'data' / 'raw' / 'after_pca.txt')
-    hla = pd.read_csv(BASE_DIR / 'data' / 'raw' / 'ParatopeIMGTopsi.txt', sep='\t')
-    hla_dic = HLA_Dictionary(hla)
-    dic_inv = dictionary(list(hla_dic.keys()))
-    ori = df[['peptide', 'HLA']].copy()
-    ori['immunogenicity'] = '0'
-    ds = construct_aaindex(ori, hla_dic, after_pca, dic_inv)
-    model = arsitekturCNN()
-    model.load_weights(str(BASE_DIR / 'models' / 'CNN_WEIGHT_OPSI') + '/')
-    return model.predict([peptide_iterate(ds), hla_iterate(ds)], verbose=0).ravel()
+    from src.models.deepimmuno import score
+    return score(df)
 
 
-def load_bigmhc(df):
-    p = SCRATCH / 'lung_bigmhc.prd'
+def load_external(df, name, column):
+    """Attach a published predictor's scores from data/external/ (see its README)."""
+    p = EXTERNAL / name
     if not p.exists():
-        print('  BigMHC lung predictions not found, skipping')
+        print(f'  {name} not found, skipping {column}')
         return df
-    b = pd.read_csv(p).rename(columns={'pep': 'peptide', 'BigMHC_IM': 'bigmhc_im'})
-    b['HLA'] = b['mhc'].str.replace(':', '', regex=False)
-    return df.merge(b[['peptide', 'HLA', 'bigmhc_im']].drop_duplicates(),
-                    on=['peptide', 'HLA'], how='left')
-
-
-def load_mixmhcpred(df):
-    rows = []
-    for f in sorted((SCRATCH / 'lungmix').glob('*.out')):
-        short = f.stem
-        hla = f'HLA-{short[0]}*{short[1:]}'
-        try:
-            tab = pd.read_csv(f, sep='\t', comment='#')
-        except Exception:
-            continue
-        col = next((c for c in tab.columns if c.lower() == f'score_{short.lower()}'), None)
-        if col is None or 'Peptide' not in tab.columns:
-            continue
-        rows.append(pd.DataFrame({'peptide': tab['Peptide'], 'HLA': hla, 'mixmhcpred': tab[col]}))
-    if not rows:
-        print('  MixMHCpred lung predictions not found, skipping')
-        return df
-    mix = pd.concat(rows, ignore_index=True).drop_duplicates(['peptide', 'HLA'])
-    return df.merge(mix, on=['peptide', 'HLA'], how='left')
+    e = pd.read_csv(p)[['peptide', 'HLA', column]].drop_duplicates(['peptide', 'HLA'])
+    return df.merge(e, on=['peptide', 'HLA'], how='left')
 
 
 def load_study_oof(df, full):
@@ -123,8 +87,8 @@ def main():
           f'{df["reference_id"].nunique()} studies, {df["HLA"].nunique()} alleles\n')
 
     df = load_study_oof(df, full)
-    df = load_bigmhc(df)
-    df = load_mixmhcpred(df)
+    df = load_external(df, 'bigmhc_im_lung.csv', 'bigmhc_im')
+    df = load_external(df, 'mixmhcpred_lung.csv', 'mixmhcpred')
     print('scoring DeepImmuno on all lung pairs...', flush=True)
     df['deepimmuno'] = score_deepimmuno(df)
     # allele prior learned from NON-lung data only, so it never sees a lung label

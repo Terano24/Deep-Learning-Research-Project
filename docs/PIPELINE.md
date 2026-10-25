@@ -39,10 +39,31 @@ python -m src.data.features                # caches data/processed/peptide_featu
 
 ```bash
 python -m src.models.train                           # original CNN, leakage-safe retrain
+python -m src.models.train --rescore                 # rebuild test_predictions.csv only
 python -m src.models.improve pretrain --epochs 12    # binding pretraining (held-out AUC 0.958)
 python -m src.models.improve cv --variants pretrained_lung_feat --folds 3
 python -m src.models.improve final --variant pretrained_lung_feat --seeds 5
 python -m src.models.rank --epochs 25 --pairs-per-group 800   # study-stratified ranking
+```
+
+`train.py` writes `results/test_predictions.csv` with one column per predictor.
+`--rescore` rebuilds that file from the saved weights without retraining anything.
+
+### The two CNN checkpoints are not interchangeable
+
+| Path | What it is | Test AUC |
+|---|---|---|
+| `models/CNN_WEIGHT_OPSI` | DeepImmuno's released `cnn_model_331_3_7`, byte for byte | 0.606 |
+| `models/CNN_RETRAINED` | the same architecture, trained here on our split | 0.792 |
+
+The published checkpoint is the one that may be called DeepImmuno, and it is only ever
+loaded through `src/models/deepimmuno.py`. Our copy is written to the `cnn_retrained`
+column. An earlier version of this pipeline wrote ours to a column named `cnn` and the
+analyses renamed that column to `deepimmuno`, reporting our model as the published one;
+the column names are explicit now so that cannot recur. Check with:
+
+```bash
+python -m src.models.deepimmuno            # prints the published checkpoint's test AUC
 ```
 
 ## 3. Analyses
@@ -60,7 +81,9 @@ python -m src.analysis.feature_ablation    # do self-similarity features help?
 
 ## 4. External baselines
 
-These are third-party tools installed outside the repository.
+Their outputs on our pairs are committed under `data/external/` (see the README there),
+so §3.5 and §3.6 can be reproduced without installing any of these tools. The commands
+below are how those files were generated.
 
 **BigMHC** (immunogenicity; ~2.5 GB of weights, needs `torch`)
 
@@ -89,9 +112,9 @@ Recompiling `lib/PRIME.cc` on Linux is the likely route if this baseline is want
 ## Known limitations
 
 - Peptide lengths are restricted to 9 and 10, inherited from the DeepImmuno encoding.
-- BigMHC's training set is published separately (Mendeley `10.17632/dvmz6pkzvb`) and is
-  not included here, so its scores could not be checked for overlap with our test split
-  the way DeepImmuno's were. BigMHC_IM was transfer-learned on IEDB immunogenicity data
-  and is therefore likely to share peptides with our test set.
+- BigMHC's immunogenicity training set (Mendeley `10.17632/dvmz6pkzvb`) is included as
+  `data/external/bigmhc_im_train.csv` and is what the 26.5% overlap figure is measured
+  against. MixMHCpred's training set is not public, so it could not be audited the same
+  way.
 - The binding pretraining set is capped at 400,000 records.
 - MixMHCpred has no model for `HLA-B*4102` (1 pair in the test split, scored as missing).

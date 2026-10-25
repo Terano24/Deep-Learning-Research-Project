@@ -87,7 +87,7 @@ def load_predictions():
 
 def main():
     df = load_predictions()
-    models = [c for c in ['pocket_attention', 'cnn', 'gbm_baseline', 'allele_prior_baseline'] if c in df]
+    models = [c for c in ['pocket_attention', 'cnn_retrained', 'gbm_baseline', 'allele_prior_baseline'] if c in df]
     out = {'n_test_pairs': len(df), 'models': models}
     print(f'test pairs: {len(df)}   models: {models}\n')
 

@@ -34,9 +34,7 @@ from src.analysis.confounds import within_allele_auc
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 RESULTS = BASE_DIR / 'results'
-TRAP = Path('C:/Users/Terano/AppData/Local/Temp/claude/'
-            'c--Users-Terano-OneDrive-Documents-CNN-Lung-Cancer-Deep-Learning-Research-Project/'
-            '02bbbf46-fefb-4293-9822-36532cdb812c/scratchpad/trap/pathogenic_db.csv')
+TRAP = BASE_DIR / 'data' / 'external' / 'trap_pathogenic_db.csv'
 SEED = 42
 N_SPLITS = 5
 

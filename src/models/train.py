@@ -92,12 +92,51 @@ def gbm_features(df, x_pep):
     return np.column_stack([x_pep.reshape(len(df), -1), alleles])
 
 
+def test_frame(df, x_pep, x_hla, y, train, test):
+    """The held-out test split with every predictor's scores, one column each.
+
+    Shared by the full training run and by --rescore. The CNN this project trained is
+    'cnn_retrained'; 'deepimmuno' is the published checkpoint. Keeping both under
+    explicit names is deliberate: an earlier version of this pipeline wrote ours to a
+    column called 'cnn' and downstream analyses renamed that column to 'deepimmuno',
+    which reported our model as theirs.
+    """
+    from src.models.deepimmuno import score as deepimmuno_score
+    prior = df[train].groupby('HLA')['label'].mean()
+    p_prior = df.loc[test, 'HLA'].map(prior).fillna(df.loc[train, 'label'].mean()).values
+    gbm = HistGradientBoostingClassifier(random_state=SEED, class_weight='balanced')
+    feats = gbm_features(df, x_pep)
+    gbm.fit(feats[train], y[train])
+    return {'gbm_baseline': gbm.predict_proba(feats[test])[:, 1],
+            'allele_prior_baseline': p_prior,
+            'deepimmuno': deepimmuno_score(df[test])}
+
+
+def rescore(df, x_pep, x_hla, y, train, test):
+    """Rebuild results/test_predictions.csv from the saved weights, without retraining."""
+    model = arsitekturCNN()
+    model.load_weights(str(BASE_DIR / 'models' / 'CNN_RETRAINED' / 'weights'))
+    cols = {'cnn_retrained': predict(model, x_pep[test], x_hla[test])}
+    cols.update(test_frame(df, x_pep, x_hla, y, train, test))
+    out = df[test][['peptide', 'HLA', 'label', 'lung_cancer']].copy()
+    yt = y[test].astype(int)
+    for name, p in cols.items():
+        out[name] = p
+        print(f'{name:>22}  test AUC {roc_auc_score(yt, p):.3f}')
+    dest = BASE_DIR / 'results' / 'test_predictions.csv'
+    out.to_csv(dest, index=False)
+    print('wrote', dest)
+
+
 def main(args):
     df = pd.read_csv(OUT_PATH) if OUT_PATH.exists() and not args.rebuild else build_dataset()
     x_pep, x_hla = encode(df)
     y = df['label'].values.astype('float32')
     train = (df['split'] == 'train').values
     test = (df['split'] == 'test').values
+    if args.rescore:
+        rescore(df, x_pep, x_hla, y, train, test)
+        return
     results = {'config': vars(args)}
 
     # ---- 10-fold CV, fresh model per fold -------------------------------------------------
@@ -130,19 +169,13 @@ def main(args):
     yt = y[test].astype(int)
     lung = df.loc[test, 'lung_cancer'].values
 
-    # ---- baselines -----------------------------------------------------------------------
-    prior = df[train].groupby('HLA')['label'].mean()
-    p_prior = df.loc[test, 'HLA'].map(prior).fillna(df.loc[train, 'label'].mean()).values
-    gbm = HistGradientBoostingClassifier(random_state=SEED, class_weight='balanced')
-    feats = gbm_features(df, x_pep)
-    gbm.fit(feats[train], y[train])
-    p_gbm = gbm.predict_proba(feats[test])[:, 1]
-
-    models = {'cnn': p_cnn, 'gbm_baseline': p_gbm, 'allele_prior_baseline': p_prior}
+    # ---- baselines, and DeepImmuno's own released checkpoint on the same pairs ----------
+    models = {'cnn_retrained': p_cnn}
+    models.update(test_frame(df, x_pep, x_hla, y, train, test))
     results['test'] = {'final_epochs': final_epochs}
     for name, p in models.items():
         results['test'][name] = {'all': metrics(yt, p), 'lung_cancer': metrics(yt[lung], p[lung])}
-        if name == 'cnn':
+        if name == 'cnn_retrained':
             results['test'][name]['all']['auc_ci95'] = bootstrap_auc(yt, p)
             results['test'][name]['lung_cancer']['auc_ci95'] = bootstrap_auc(yt[lung], p[lung])
         a, l = results['test'][name]['all'], results['test'][name]['lung_cancer']
@@ -167,4 +200,6 @@ if __name__ == '__main__':
     ap.add_argument('--folds', type=int, default=10, help='number of CV folds to run (max 10)')
     ap.add_argument('--epochs', type=int, default=30, help='max epochs (early stopping on val loss)')
     ap.add_argument('--rebuild', action='store_true', help='rebuild data/processed/dataset.csv')
+    ap.add_argument('--rescore', action='store_true',
+                    help='rebuild results/test_predictions.csv from saved weights, no training')
     main(ap.parse_args())

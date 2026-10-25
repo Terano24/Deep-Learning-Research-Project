@@ -11,7 +11,7 @@ trained and evaluated on can support such values. From 65,732 human MHC-I T-cell
 records we identify 2,914 peptide–HLA pairs assayed independently by two or more
 publications, and measure how well one laboratory's outcome predicts another's on the same
 pair. Agreement is 72.2%, Cohen's κ = 0.273, and the equivalent AUC is 0.637 (95% CI
-0.628–0.648); restricting to the least-selected subset, pairs assayed by exactly two
+0.618–0.656); restricting to the least-selected subset, pairs assayed by exactly two
 studies, gives 0.681. A repeat experiment observes the biology directly and is therefore
 the most informative predictor obtainable, so reported performance exceeds what these
 labels can support. We then identify three benchmark-construction choices that produce the
@@ -20,9 +20,10 @@ indistinguishably from not splitting at all (IEDB: 0.826 vs 0.840 random; an ind
 dataset: 0.862 vs 0.857), whereas grouping by source publication reduces AUC to 0.607. This
 follows from study-level label structure: one all-negative study supplies 37% of all pairs,
 75% of studies report a single outcome class, and a baseline using allele identity alone,
-with no peptide information, reaches 0.752, above a widely used published predictor at
-0.647. Second, two published predictors were trained on 37.5% and 26.5% of our evaluation
-pairs, and score 0.07 and 0.26 AUC lower on pairs they had not seen. Third, defining
+with no peptide information, reaches 0.752, above every published predictor we tested
+(0.647, 0.606 and 0.559). Second, two published predictors were trained on 37.5% and 26.5%
+of our evaluation pairs, and score 0.23 and 0.26 AUC lower on pairs they had not seen,
+where neither clears chance. Third, defining
 negatives as untested candidates rather than assayed negatives raises AUC from ≈0.55 to
 ≈0.97 for the same nominal task. Under leakage-free evaluation, measuring within study and
 within allele across 205 groups, the best model we construct reaches 0.573 (95% CI
@@ -140,9 +141,9 @@ the same pair (§7.3).
 
 | Quantity | Value (95% CI) |
 |---|---|
-| Agreement | 0.722 (0.714–0.731) |
-| Cohen's κ | **0.273** (0.255–0.294) |
-| **AUC** | **0.637** (0.628–0.648) |
+| Agreement | 0.722 (0.706–0.739) |
+| Cohen's κ | **0.273** (0.235–0.311) |
+| **AUC** | **0.637** (0.618–0.656) |
 
 A κ of 0.273 denotes fair agreement only. The agreement between two experiments on the same
 pair bounds what can be *measured* against these labels.
@@ -186,21 +187,31 @@ grouping leaves the structure that inflates these results untouched.
 
 On the held-out test split (4,641 pairs, 1,470 positive), an allele-prior baseline reaches
 0.752. It predicts each allele's training-set positive rate and uses no peptide information
-whatsoever. BigMHC_IM reaches 0.647 and MixMHCpred 0.559 on the same pairs.
+whatsoever. On the same pairs BigMHC_IM reaches 0.647, DeepImmuno 0.606 and MixMHCpred
+0.559: every published predictor scores below the baseline that never sees the peptide.
 
 | Predictor | Pooled AUC | Within-allele AUC |
 |---|---|---|
 | This study | 0.832 | 0.769 |
 | Gradient boosting on engineered features | 0.810 | 0.721 |
-| DeepImmuno [2] | 0.792 | 0.661 |
+| DeepImmuno architecture, retrained here | 0.792 | 0.661 |
 | **Allele prior (no peptide information)** | **0.752** | 0.500 |
 | BigMHC_IM [9] | 0.647 | 0.609 |
-| MixMHCpred (binding only) [10] | 0.559 | 0.570 |
+| DeepImmuno [2] | 0.606 | 0.633 |
+| MixMHCpred 3.0 (binding only) [11] | 0.559 | 0.570 |
+
+The two DeepImmuno rows are different models and the gap between them is itself a result:
+the published checkpoint scores 0.606, while the same architecture retrained on our
+training split reaches 0.792. The architecture is not what separates them; exposure to
+this dataset's study structure is.
 
 The allele prior is constant within an allele, so its within-allele AUC is 0.500 by
-construction: the entire 0.752 is allele frequency. Holding the allele fixed costs every
-method between 0.06 and 0.13 AUC, and the two published predictors give up most of their
-margin over chance.
+construction: the entire 0.752 is allele frequency. Holding the allele fixed costs the
+models trained here between 0.06 and 0.13 AUC, which is the allele signal they had been
+using. It costs the externally trained predictors nothing — DeepImmuno and MixMHCpred
+score marginally *higher* within allele than pooled — because they never learned this
+dataset's allele skew in the first place. What looks like an advantage for the local
+models over published ones is, to a large extent, that signal.
 
 A peptide-blind baseline that beats published predictors is diagnostic: on this benchmark,
 allele identity and dataset structure carry more signal than the peptide sequence does.
@@ -212,7 +223,7 @@ overlap, and performance falls sharply outside it.
 
 | Predictor | Overlap | Seen | Unseen |
 |---|---|---|---|
-| DeepImmuno [2] | 37.5% of test peptides | 0.835 | 0.763 |
+| DeepImmuno [2] | 37.5% of test peptides | 0.746 | **0.512** |
 | BigMHC_IM [9] | 26.5% of lung pairs (exact pair) | 0.807 | **0.549** |
 
 On 778 lung-cancer-associated pairs unseen by both, every published predictor's interval
@@ -341,8 +352,9 @@ measurement.
 - Analysis is restricted to 9–10mers and HLA-A/B/C, inherited from the encoding of the
   predictor we reimplemented.
 - We propose no improved predictor. Our best model is a leakage-free reference point, and
-  its apparent advantage over published tools on the peptide-grouped split (0.832 vs 0.792)
-  is an artifact of the split we argue against.
+  its apparent advantage over published tools on the peptide-grouped split (0.832 against
+  0.606 for DeepImmuno's released checkpoint) is an artifact of the split we argue against,
+  and of our model having been fitted to this dataset's study structure.
 
 
 ## 6. Conclusion
@@ -381,17 +393,24 @@ Two schemes are stored in the same table: `split`/`fold` grouped by peptide, and
 Pairs assayed in ≥2 distinct publications were identified. Each study contributes its
 majority outcome for that pair; within-study ties are dropped. Two studies are drawn at
 random per pair, and we compute agreement, Cohen's κ, and the AUC of study A's label
-predicting study B's. This is repeated over 200 random pairings; we report the mean and the
-2.5/97.5 percentiles. Sensitivity was assessed over four aggregation rules plus an
+predicting study B's. The point estimate is the mean over 200 random pairings of the full
+set, so it does not depend on one arbitrary draw. The interval is a separate bootstrap that
+resamples the pairs themselves with replacement, 2,000 times, drawing a fresh pairing each
+time; percentiles taken across re-pairings of one fixed set of pairs would capture only how
+the two studies are chosen and would be about half as wide. Because both labels are binary,
+this AUC equals balanced accuracy. Sensitivity was assessed over four aggregation rules plus an
 unaggregated variant, over assay families, over HLA locus, and stratified by the number of
 studies testing a pair.
 
 ### 7.4 Models
 
-*Published predictors.* DeepImmuno [2] (two-branch Conv2D); BigMHC_IM [9] (seven-network
-ensemble, presentation-pretrained then transfer-learned); MixMHCpred 3.0 [10] (binding only,
-included as a control). PRIME 2.0 was obtained but its bundled Windows binary did not
-execute; it is excluded and documented.
+*Published predictors.* DeepImmuno [2] (two-branch Conv2D), scored through its released
+`cnn_model_331_3_7` checkpoint, which we verified byte-identical to the copy in this
+repository; BigMHC_IM [9] (seven-network ensemble, presentation-pretrained then
+transfer-learned); MixMHCpred 3.0 [11] (binding only, included as a control). PRIME 2.0 was
+obtained but its bundled Windows binary did not execute; it is excluded and documented.
+Where a table reports the DeepImmuno architecture retrained by us, it is labelled as such
+and is a different set of weights from the released checkpoint.
 
 *Baselines.* An allele prior predicting each allele's training-set positive rate, using no
 peptide information; gradient boosting on the AAindex/PCA encoding.
@@ -450,7 +469,7 @@ as `src/data` (retrieval, cleaning, splits), `src/models` (architectures, traini
 model predictions are released with the repository.
 
 External resources: IEDB Query API; UniProt UP000005640; TRAP [3]; the harmonised datasets
-of Müller et al. [4]; the public releases of DeepImmuno [2], BigMHC [9] and MixMHCpred [10].
+of Müller et al. [4]; the public releases of DeepImmuno [2], BigMHC [9] and MixMHCpred [11].
 
 ## Author contributions
 
@@ -497,6 +516,12 @@ This research received no specific grant from any funding agency.
 10. Gfeller D, Schmidt J, Croce G, Guillaume P, Bobisse S, et al. Improved predictions of
     antigen presentation and TCR recognition with MixMHCpred2.2 and PRIME2.0. *Cell Syst*
     2023;14(1):72–83.
+11. Tadros DM, et al. Predicting MHC-I ligands across alleles and species: how far can
+    we go? *Genome Med* 2025. (MixMHCpred 3.0 -- the version run here. This is the
+    citation the tool's own output header requests; full author list and volume are
+    still to be confirmed against the publisher record.)
 
 *Reference details were verified against CrossRef and PubMed records where available.
-Entries 8–10 should be re-checked against the publisher record before journal submission.*
+Entries 8–11 should be re-checked against the publisher record before journal submission;
+entry 11 in particular is taken from the MixMHCpred 3.0 output header and its author list
+and volume are unconfirmed.*
