@@ -10,8 +10,8 @@ prioritise candidates for neoantigen vaccines. We ask whether the labels these m
 trained and evaluated on can support such values. From 65,732 human MHC-I T-cell assay
 records we identify 2,914 peptide–HLA pairs assayed independently by two or more
 publications, and measure how well one laboratory's outcome predicts another's on the same
-pair. Agreement is 72.2%, Cohen's κ = 0.273, and the equivalent AUC is 0.637 (95% CI
-0.618–0.656); restricting to the least-selected subset, pairs assayed by exactly two
+pair. Agreement is 72.2%, Cohen's κ = 0.273, and the equivalent AUC is 0.636 (95% CI
+0.617–0.656); restricting to the least-selected subset, pairs assayed by exactly two
 studies, gives 0.681. A repeat experiment observes the biology directly and is therefore
 the most informative predictor obtainable, so reported performance exceeds what these
 labels can support. We then identify three benchmark-construction choices that produce the
@@ -141,9 +141,9 @@ the same pair (§7.3).
 
 | Quantity | Value (95% CI) |
 |---|---|
-| Agreement | 0.722 (0.706–0.739) |
-| Cohen's κ | **0.273** (0.235–0.311) |
-| **AUC** | **0.637** (0.618–0.656) |
+| Agreement | 0.722 (0.706–0.738) |
+| Cohen's κ | **0.273** (0.235–0.312) |
+| **AUC** | **0.636** (0.617–0.656) |
 
 A κ of 0.273 denotes fair agreement only. The agreement between two experiments on the same
 pair bounds what can be *measured* against these labels.
@@ -152,17 +152,17 @@ pair bounds what can be *measured* against these labels.
 
 We tested three threats to this estimate (**Figure 2**, panel a).
 
-**Aggregation rule.** Majority vote gives 0.637; any-positive 0.652; ties-to-positive 0.646;
-ties-to-negative 0.556; and raw records with no aggregation at all 0.594. The range is
+**Aggregation rule.** Majority vote gives 0.636; any-positive 0.652; ties-to-positive 0.646;
+ties-to-negative 0.556; and raw records with no aggregation at all 0.595. The range is
 0.556–0.652, and the least-processed variant falls below the headline figure.
 
 **Selection bias.** Pairs are not retested at random. Reproducibility declines with
-retesting frequency: 0.681 for pairs assayed by exactly two studies (n = 1,806), 0.531 for
-exactly three, 0.542 for four or more. We therefore adopt 0.681 as a conservative bound.
+retesting frequency: 0.681 for pairs assayed by exactly two studies (n = 1,806), 0.530 for
+exactly three, 0.543 for four or more. We therefore adopt 0.681 as a conservative bound.
 Separately, repeat-tested pairs are 72.5% positive against 26.5% for singly-tested pairs, so
 the decision to retest is driven by the previous result.
 
-**Slice dependence.** By assay family, ELISpot 0.703, ICS 0.653, multimer/tetramer 0.604;
+**Slice dependence.** By assay family, ELISpot 0.702, ICS 0.655, multimer/tetramer 0.605;
 by locus, HLA-A 0.594, HLA-B 0.775. Every slice falls far below reported performance. The
 ordering across assay families independently reproduces the proficiency-panel finding that
 tetramer assays vary more than ELISpot [1].
@@ -221,10 +221,10 @@ allele identity and dataset structure carry more signal than the peptide sequenc
 Intersecting our evaluation pairs with released training sets (§7.5) shows substantial
 overlap, and performance falls sharply outside it.
 
-| Predictor | Overlap | Seen | Unseen |
+| Predictor | Evaluation pairs it had seen | Seen | Unseen |
 |---|---|---|---|
-| DeepImmuno [2] | 37.5% of test peptides | 0.746 | **0.512** |
-| BigMHC_IM [9] | 26.5% of lung pairs (exact pair) | 0.807 | **0.549** |
+| DeepImmuno [2] | 37.5% (shared peptide) | 0.746 | **0.512** |
+| BigMHC_IM [9] | 26.5% (exact peptide–HLA pair) | 0.807 | **0.549** |
 
 On 778 lung-cancer-associated pairs unseen by both, every published predictor's interval
 includes chance: DeepImmuno 0.528 (0.475–0.581), BigMHC 0.502 (0.438–0.563), MixMHCpred
@@ -287,7 +287,7 @@ determinants of TCR recognition [8].
 
 ## 4. Discussion
 
-Reported AUCs of 0.85–0.90 are higher than the measured reliability of the labels (0.637, or
+Reported AUCs of 0.85–0.90 are higher than the measured reliability of the labels (0.636, or
 0.681 under the conservative bound) and higher than any model we could build under
 leakage-free evaluation (0.573). We attribute the gap to three things: peptide-level
 splitting, which behaves like no splitting; training-set overlap, which we found in both
@@ -360,7 +360,7 @@ measurement.
 ## 6. Conclusion
 
 The labels underlying T-cell epitope immunogenicity benchmarks reproduce across
-laboratories at AUC 0.637 (κ = 0.273; conservatively 0.681). Published predictors report
+laboratories at AUC 0.636 (κ = 0.273; conservatively 0.681). Published predictors report
 0.85–0.90. We trace the difference to peptide-level splitting that provides no protection,
 training-set contamination of 26–38%, and negative-set definitions that alter the task
 being measured. A leakage-free model reaches 0.573, attaining 84% of what the labels permit,
@@ -448,12 +448,12 @@ class account for 57% of all pairs.
 
 **Figure 2. What the labels can support, and what a leakage-free model achieves.**
 Both panels are AUC on one scale, so the two reference bands run through both and are
-labelled once: the light band is the measured reliability of the labels (0.637–
+labelled once: the light band is the measured reliability of the labels (0.636–
 0.681), the dark band the 0.85–0.90 range reported in the literature. The dashed
 line is chance. **(a)** AUC of one study's outcome predicting another's on the same
 pair, with 95% confidence intervals, under three robustness checks: the rule used to
 aggregate repeat records, how often the pair was retested, and the assay family and HLA
-locus. Filled markers are the headline estimate (0.637) and the conservative bound
+locus. Filled markers are the headline estimate (0.636) and the conservative bound
 adopted in the text (0.681), which are the edges of the light band. No variant
 approaches the dark one. **(b)** Within-study, within-allele AUC for six training
 schemes, with intervals bootstrapped over studies. Every interval clears chance; the
