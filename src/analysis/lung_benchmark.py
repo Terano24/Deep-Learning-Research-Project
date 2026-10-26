@@ -65,6 +65,79 @@ def load_study_oof(df, full):
     return df
 
 
+def boot_auc(y, s, n=2000, seed=0):
+    rng = np.random.default_rng(seed)
+    y, s = np.asarray(y), np.asarray(s)
+    vals = []
+    for _ in range(n):
+        i = rng.integers(0, len(y), len(y))
+        if 0 < y[i].sum() < len(i):
+            vals.append(roc_auc_score(y[i], s[i]))
+    return [float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))]
+
+
+def contamination(df):
+    """Overlap with each published predictor's training set, and the cost of removing it.
+
+    Overlap is reported two ways because the two are not interchangeable and the
+    difference decides which pairs count as unseen: by shared peptide (strict -- the
+    model saw that sequence against some allele) and by exact peptide-HLA pair (lax).
+    The 'unseen by both' subset uses the strict rule for both predictors, so a pair
+    survives only if neither model has encountered its sequence at all.
+
+    These numbers were previously typed into the manuscript from a figure script that
+    hard-coded them; nothing in results/ produced them. They are computed here.
+    """
+    train = {}
+    for name, fn in [('deepimmuno', 'deepimmuno_train.csv'),
+                     ('bigmhc_im', 'bigmhc_im_train.csv')]:
+        p = EXTERNAL / fn
+        if p.exists():
+            tr = pd.read_csv(p)
+            train[name] = (set(tr['peptide']),
+                           set(map(tuple, tr[['peptide', 'HLA']].values)))
+
+    pairs = list(zip(df['peptide'], df['HLA']))
+    out, seen_any = {}, np.zeros(len(df), bool)
+    for name, (peps, prs) in train.items():
+        if name not in df:
+            continue
+        by_pep = np.array([p in peps for p, _ in pairs])
+        by_pair = np.array([ph in prs for ph in pairs])
+        seen_any |= by_pep
+        row = {'overlap_peptide': float(by_pep.mean()),
+               'overlap_exact_pair': float(by_pair.mean()),
+               'n_seen': int(by_pep.sum()), 'n_unseen': int((~by_pep).sum())}
+        for tag, mask in [('seen', by_pep), ('unseen', ~by_pep)]:
+            s = df[mask].dropna(subset=[name])
+            if len(s) >= 50 and s['label'].nunique() > 1:
+                row[tag] = {'n': int(len(s)),
+                            'auc': float(roc_auc_score(s['label'], s[name])),
+                            'auc_ci95': boot_auc(s['label'], s[name])}
+        out[name] = row
+        print(f'  {name:>12}: overlap {by_pep.mean():.1%} by peptide, '
+              f'{by_pair.mean():.1%} by exact pair | '
+              f'seen {row.get("seen", {}).get("auc", float("nan")):.3f} '
+              f'unseen {row.get("unseen", {}).get("auc", float("nan")):.3f}')
+
+    u = df[~seen_any]
+    out['unseen_by_all'] = {'n': int(len(u)), 'n_pos': int(u['label'].sum()),
+                            'rule': 'shared peptide with either training set'}
+    print(f'\n  unseen by every audited predictor: {len(u)} pairs, '
+          f'{int(u["label"].sum())} positive')
+    for m in ['deepimmuno', 'bigmhc_im', 'mixmhcpred', 'allele_prior']:
+        if m not in u:
+            continue
+        s = u.dropna(subset=[m])
+        if len(s) < 50 or s['label'].nunique() < 2:
+            continue
+        a = float(roc_auc_score(s['label'], s[m]))
+        ci = boot_auc(s['label'], s[m])
+        out['unseen_by_all'][m] = {'n': int(len(s)), 'auc': a, 'auc_ci95': ci}
+        print(f'    {m:>14} {a:.3f}  CI [{ci[0]:.3f}, {ci[1]:.3f}]')
+    return out
+
+
 def evaluate(df, model):
     s = df.dropna(subset=[model])
     if len(s) < 50 or s['label'].nunique() < 2:
@@ -108,6 +181,8 @@ def main():
         wa = f'{r["within_allele"]:.3f}' if r['within_allele'] else '  n/a'
         ws = f'{r["within_study"]:.3f}' if r['within_study'] else '  n/a'
         print(f'{m:>22} {r["n"]:>5} {r["auc"]:>7.3f} {r["pr_auc"]:>8.3f} {wa:>9} {ws:>8}')
+
+    out['contamination'] = contamination(df)
 
     (RESULTS / 'lung_benchmark.json').write_text(json.dumps(out, indent=2))
     df.to_csv(RESULTS / 'lung_predictions.csv', index=False)

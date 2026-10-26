@@ -224,11 +224,12 @@ overlap, and performance falls sharply outside it.
 | Predictor | Evaluation pairs it had seen | Seen | Unseen |
 |---|---|---|---|
 | DeepImmuno [2] | 37.5% (shared peptide) | 0.746 | **0.512** |
-| BigMHC_IM [9] | 26.5% (exact peptide–HLA pair) | 0.807 | **0.549** |
+| BigMHC_IM [9] | 27.1% (shared peptide) | 0.807 | **0.549** |
 
-On 778 lung-cancer-associated pairs unseen by both, every published predictor's interval
-includes chance: DeepImmuno 0.528 (0.475–0.581), BigMHC 0.502 (0.438–0.563), MixMHCpred
-0.446 (0.384–0.503), allele prior 0.464 (0.414–0.513).
+On the 778 lung-cancer-associated pairs whose sequence appears in neither training set,
+every published predictor's interval includes chance: DeepImmuno 0.528 (0.476–0.583),
+BigMHC 0.502 (0.438–0.561), MixMHCpred 0.446 (0.383–0.502), allele prior 0.465
+(0.415–0.514).
 
 ### 3.7 The definition of a negative changes the task by ≈0.4 AUC
 
@@ -466,7 +467,14 @@ All analyses are reproducible from `docs/PIPELINE.md`, and
 `notebooks/Reproduce_Manuscript.ipynb` reproduces every number and figure. Code is organised
 as `src/data` (retrieval, cleaning, splits), `src/models` (architectures, training) and
 `src/analysis` (all reported analyses). The curated benchmark, both split schemes and all
-model predictions are released with the repository.
+model predictions are released with the repository, together with the outputs of every
+audited third-party predictor on our pairs, so the comparisons in §3.5 and §3.6 can be
+reproduced without installing those tools. DeepImmuno's released checkpoint is scored
+directly; `python -m src.models.deepimmuno` prints its held-out AUC in one command.
+
+Archived at Zenodo: DOI TO BE INSERTED ON DEPOSIT. Repository:
+`https://github.com/Terano24/Deep-Learning-Research-Project`. Code is released under the
+MIT licence; redistributed third-party data retains its own terms, listed in `LICENSE`.
 
 External resources: IEDB Query API; UniProt UP000005640; TRAP [3]; the harmonised datasets
 of Müller et al. [4]; the public releases of DeepImmuno [2], BigMHC [9] and MixMHCpred [11].

@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+title: >-
+  Leakage, Label Noise, and Overestimated Performance in T-Cell Epitope
+  Immunogenicity Prediction
+message: >-
+  If you use this software, data or the benchmark protocol, please cite the
+  archived release.
+type: software
+authors:
+  - given-names: I Nyoman Agung Ananda
+    family-names: Terano
+    affiliation: Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia
+    # orcid: 'https://orcid.org/0000-0000-0000-0000'   # add before depositing
+  - given-names: Mirrabell Frederica
+    family-names: Hadiwijono
+    affiliation: University of Toronto, Toronto, Canada
+    # orcid: 'https://orcid.org/0000-0000-0000-0000'   # add before depositing
+repository-code: 'https://github.com/Terano24/Deep-Learning-Research-Project'
+abstract: >-
+  Computational predictors of CD8+ T-cell epitope immunogenicity report ROC-AUC
+  of 0.85-0.90 on data derived from the Immune Epitope Database. This repository
+  measures how much of that reflects transferable biology and how much reflects
+  the structure of the benchmark. Holding out data by peptide, the field's
+  standard precaution, is shown to be indistinguishable from not splitting at
+  all, while grouping by source publication reduces AUC to 0.607; a baseline
+  using allele identity alone, with no peptide information, outscores every
+  published predictor tested; two published predictors are shown to have been
+  trained on 37.5% and 27.1% of the evaluation pairs; and the agreement between
+  laboratories assaying the same pair bounds measurable performance at AUC
+  0.636. Includes the evaluation protocol, the curated benchmark with both split
+  schemes, and the outputs of the audited predictors.
+keywords:
+  - immunogenicity prediction
+  - T-cell epitope
+  - neoantigen
+  - data leakage
+  - benchmark
+  - reproducibility
+  - IEDB
+  - machine learning evaluation
+license: MIT
+version: 1.0.0
+date-released: '2026-10-27'
