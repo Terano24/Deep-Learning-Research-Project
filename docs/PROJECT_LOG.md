@@ -182,9 +182,12 @@ traditional track; open access free via the corresponding author's UofT Elsevier
 **In progress:** rerunning all predictors on the full 1,109 lung pairs via study-grouped
 out-of-fold (`src/analysis/lung_benchmark.py`) to become the paper's primary table.
 
-**Not done:** BigMHC's training set (Mendeley `10.17632/dvmz6pkzvb`) was not downloaded, so
-its scores were never checked for overlap with our test split the way DeepImmuno's were.
-BigMHC_IM was transfer-learned on IEDB immunogenicity data and is probably contaminated too.
+**Done 2026-10-26:** BigMHC's immunogenicity training set (Mendeley `10.17632/dvmz6pkzvb`)
+is downloaded and committed as `data/external/bigmhc_im_train.csv`. It was contaminated, as
+suspected: 27.1% of the lung pairs by shared peptide, 26.5% by exact pair. BigMHC_IM scores
+0.807 on pairs it had seen and 0.549 on those it had not. `src/analysis/lung_benchmark.py`
+computes this (`contamination()`), so it is in `results/lung_benchmark.json` rather than
+typed into the manuscript by hand.
 
 ---
 

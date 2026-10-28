@@ -10,11 +10,16 @@ authors:
   - given-names: I Nyoman Agung Ananda
     family-names: Terano
     affiliation: Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia
-    # orcid: 'https://orcid.org/0000-0000-0000-0000'   # add before depositing
+    orcid: 'https://orcid.org/0009-0002-6459-7945'
   - given-names: Mirrabell Frederica
     family-names: Hadiwijono
     affiliation: University of Toronto, Toronto, Canada
     # orcid: 'https://orcid.org/0000-0000-0000-0000'   # add before depositing
+contact:
+  - given-names: I Nyoman Agung Ananda
+    family-names: Terano
+    email: teranoace@gmail.com
+    orcid: 'https://orcid.org/0009-0000-9164-8096'
 repository-code: 'https://github.com/Terano24/Deep-Learning-Research-Project'
 abstract: >-
   Computational predictors of CD8+ T-cell epitope immunogenicity report ROC-AUC

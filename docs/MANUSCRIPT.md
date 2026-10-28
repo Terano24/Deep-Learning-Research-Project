@@ -6,36 +6,38 @@
 
 Computational predictors of CD8⁺ T-cell epitope immunogenicity report ROC-AUC values of
 0.85–0.90 on data derived from the Immune Epitope Database (IEDB), and are used to
-prioritise candidates for neoantigen vaccines. We ask whether the labels these models are
-trained and evaluated on can support such values. From 65,732 human MHC-I T-cell assay
-records we identify 2,914 peptide–HLA pairs assayed independently by two or more
-publications, and measure how well one laboratory's outcome predicts another's on the same
-pair. Agreement is 72.2%, Cohen's κ = 0.273, and the equivalent AUC is 0.636 (95% CI
-0.617–0.656); restricting to the least-selected subset, pairs assayed by exactly two
-studies, gives 0.681. A repeat experiment observes the biology directly and is therefore
-the most informative predictor obtainable, so reported performance exceeds what these
-labels can support. We then identify three benchmark-construction choices that produce the
-excess. First, splitting data by peptide, the field's standard precaution, performs
-indistinguishably from not splitting at all (IEDB: 0.826 vs 0.840 random; an independent
-dataset: 0.862 vs 0.857), whereas grouping by source publication reduces AUC to 0.607. This
-follows from study-level label structure: one all-negative study supplies 37% of all pairs,
-75% of studies report a single outcome class, and a baseline using allele identity alone,
-with no peptide information, reaches 0.752, above every published predictor we tested
-(0.647, 0.606 and 0.559). Second, two published predictors were trained on 37.5% and 26.5%
-of our evaluation pairs, and score 0.23 and 0.26 AUC lower on pairs they had not seen,
-where neither clears chance. Third, defining
-negatives as untested candidates rather than assayed negatives raises AUC from ≈0.55 to
-≈0.97 for the same nominal task. Under leakage-free evaluation, measuring within study and
-within allele across 205 groups, the best model we construct reaches 0.573 (95% CI
-0.544–0.603), which is 84% of the conservative reliability bound, and the original
-convolutional architecture reaches 0.544, a difference that is not significant. We release
-the benchmark, both split schemes, all model predictions, and a protocol for reporting.
+prioritise candidates for neoantigen vaccines. We show that these values are inflated by
+leakage from how the benchmarks are built, and that the labels could not support them in
+any case. From 65,732 human MHC-I T-cell assay records we identified 2,914 peptide–HLA
+pairs assayed independently by two or more publications, and measured how well one
+laboratory's outcome predicts another's on the same pair. Agreement is 72.2% and Cohen's
+κ is 0.273, an AUC-equivalent of 0.636 (95% CI 0.617–0.656), or 0.681 on the least-selected
+subset of pairs assayed by exactly two studies. A repeat experiment observes the
+biology directly, so reported performance exceeds what these labels can support. Three
+benchmark-construction choices produce the excess. First, splitting by peptide, the field's
+standard precaution, performs indistinguishably from not splitting at all: 0.826 against
+0.840 for random splits on IEDB, and 0.862 against 0.857 on the independent TRAP dataset.
+Grouping by source publication instead gives 0.607. That gap of 0.219 is the leakage. It survives
+peptide-level holdout because a held-out peptide's study-mates stay in training, and study
+identity nearly determines the label: one all-negative study supplies 37% of pairs, 75% of
+studies report a single outcome class, and an allele-identity baseline that never sees the
+peptide reaches 0.752, above BigMHC_IM (0.647), DeepImmuno (0.606) and MixMHCpred 3.0
+(0.559). Second, DeepImmuno and BigMHC_IM had themselves been trained
+on 37.5% and 27.1% of our evaluation pairs, and fall by 0.23 and 0.26 AUC on pairs they had
+not seen, where neither clears chance. Third, counting untested candidates as negatives
+rather than assayed negatives raises per-patient AUC from ≈0.55 to ≈0.97 for the same
+nominal task. Under leakage-free evaluation, within study and within allele across 205
+groups, the best model we construct reaches 0.573 (95% CI 0.544–0.603), 84% of the
+conservative bound; the original convolutional architecture reaches 0.544, a difference
+that is not significant. The bound is measured on IEDB alone and limits what is measurable
+against these labels, not what is biologically achievable. We release the benchmark, both
+split schemes, all model predictions, and a protocol for reporting.
 
 **Keywords:** T-cell epitope · immunogenicity prediction · data leakage · benchmark design
 · label reliability · reproducibility · IEDB
 
 
-^¹Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia. ²University of Toronto, Toronto, Canada. Correspondence to: corresponding author to be designated prior to submission.
+^¹Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia. ²University of Toronto, Toronto, Canada. Correspondence to: I Nyoman Agung Ananda Terano (teranoace@gmail.com).
 
 ## 1. Overview
 
@@ -72,8 +74,9 @@ dataset-specific artifacts" [9]. Kapoor and Narayanan reviewed 17 scientific fie
 leakage affecting 294 papers; in one case study, complex models claimed to beat logistic
 regression stopped doing so once leakage was corrected [6].
 
-Nobody has yet quantified what the labels themselves can support, or which construction
-choices open the gap between that limit and reported performance. We do both. Our
+We are not aware of a published measurement of what the labels themselves can support, or
+of which construction choices open the gap between that limit and reported performance.
+This paper does both. Our
 contributions are:
 
 1. A measured reliability bound for IEDB immunogenicity labels, with sensitivity analyses
@@ -208,8 +211,8 @@ this dataset's study structure is.
 The allele prior is constant within an allele, so its within-allele AUC is 0.500 by
 construction: the entire 0.752 is allele frequency. Holding the allele fixed costs the
 models trained here between 0.06 and 0.13 AUC, which is the allele signal they had been
-using. It costs the externally trained predictors nothing — DeepImmuno and MixMHCpred
-score marginally *higher* within allele than pooled — because they never learned this
+using. It costs the externally trained predictors nothing, and DeepImmuno and MixMHCpred
+score marginally *higher* within allele than pooled, because they never learned this
 dataset's allele skew in the first place. What looks like an advantage for the local
 models over published ones is, to a large extent, that signal.
 
@@ -321,8 +324,7 @@ can recover it: the convolutional and attention models are statistically indisti
 and methods that do substantially better use information that sequence-only benchmarks
 lack, such as tumour expression, clonality, or the patient's own tumour-infiltrating
 repertoire [4]. Approaches that add TCR sequence without patient context report near-chance
-performance on unseen epitopes [9]. The same ceiling appears for sequence-based,
-structure-based and TCR-aware methods.
+performance on unseen epitopes [9], so the limit is not specific to sequence-only models.
 
 Raising the ceiling requires harmonised assays of the kind proficiency panels have shown to
 reduce variance [1]. Broadening coverage requires more distinct epitopes, currently limited
@@ -481,8 +483,8 @@ of Müller et al. [4]; the public releases of DeepImmuno [2], BigMHC [9] and Mix
 
 ## Author contributions
 
-Both authors contributed to study design and manuscript preparation. Correspondence and
-submission are handled by the corresponding author, to be designated prior to submission.
+Both authors contributed to study design and manuscript preparation. I Nyoman Agung Ananda
+Terano is the corresponding author and handles submission and correspondence.
 
 ## Competing interests
 
@@ -492,6 +494,14 @@ The authors declare no competing interests.
 
 This research received no specific grant from any funding agency.
 
+
+## Declaration of generative AI and AI-assisted technologies in the writing process
+
+During the preparation of this work the authors used Claude (Anthropic) to draft and edit
+the manuscript text. The research question, the study design, the choice of analyses and
+the interpretation of the results are the authors' own. The authors reviewed and edited all
+AI-assisted content and take full responsibility for the content of the published
+article.
 
 ## References
 
