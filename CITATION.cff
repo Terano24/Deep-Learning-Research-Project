@@ -28,6 +28,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.23719455
     description: Version DOI for v1.0.0
+  - type: doi
+    value: 10.5281/zenodo.23840985
+    description: Version DOI for v1.0.1
 repository-code: 'https://github.com/Terano24/Deep-Learning-Research-Project'
 abstract: >-
   Computational predictors of CD8+ T-cell epitope immunogenicity report ROC-AUC
