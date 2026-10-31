@@ -316,8 +316,9 @@ class LayoutDoc(BaseDocTemplate):
 class SingleColumnDoc(LayoutDoc):
     """Single-column layout with centred page numbers on pages 2+."""
 
-    def __init__(self, filename, pagesize=A4, hmargin=2.1 * cm, vmargin=2.0 * cm, title=None):
-        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+    def __init__(self, filename, pagesize=A4, hmargin=2.1 * cm, vmargin=2.0 * cm, title=None,
+                author=None):
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title, author=author,
                            leftMargin=hmargin, rightMargin=hmargin,
                            topMargin=vmargin, bottomMargin=vmargin)
         w = pagesize[0] - 2 * hmargin
@@ -348,8 +349,8 @@ class DuplexDoc(LayoutDoc):
     """
 
     def __init__(self, filename, pagesize=A4, inner=2.6 * cm, outer=1.9 * cm,
-                 vmargin=2.0 * cm, title=None):
-        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+                 vmargin=2.0 * cm, title=None, author=None):
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title, author=author,
                            leftMargin=inner, rightMargin=outer,
                            topMargin=vmargin, bottomMargin=vmargin)
         w = pagesize[0] - inner - outer
@@ -393,8 +394,8 @@ class TwoColumnDoc(LayoutDoc):
 
     def __init__(self, filename, pagesize=A4, vmargin=2.0 * cm, gutter=0.7 * cm,
                  inner=2.0 * cm, outer=2.0 * cm, duplex=False, title=None,
-                 banner_h=3.4 * cm):
-        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+                 banner_h=3.4 * cm, author=None):
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title, author=author,
                            leftMargin=inner, rightMargin=outer,
                            topMargin=vmargin, bottomMargin=vmargin)
         self._mirror = duplex
@@ -448,15 +449,25 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
     page = LETTER if letter else A4
     st = styles(compact=twocol)
     lines = Path(md_path).read_text(encoding='utf-8').split('\n')
+    # The PDF's own internal metadata (Title/Author), as distinct from what the
+    # submission form asks for. Left unset, reportlab writes the literal strings
+    # "(unspecified)"/"(anonymous)", and title falls back to the source filename
+    # ("MANUSCRIPT") rather than the paper's real title. Pulled from the markdown
+    # itself so the two can never drift apart.
+    doc_title = next((re.sub(r'[*_`]', '', l[2:]).strip()
+                      for l in lines if l.startswith('# ')), Path(md_path).stem)
+    author_line = next((l for l in lines if re.search(r'\*\*[A-Z][\w .\'-]+\*\*', l)), '')
+    doc_author = '; '.join(re.sub(r'[¹-⁹⁰]+$', '', a).strip()
+                           for a in re.findall(r'\*\*([^*]+)\*\*', author_line)) or None
     if twocol:
         doc = TwoColumnDoc(str(pdf_path), vmargin=vmargin * cm, duplex=duplex,
-                           title=Path(md_path).stem)
+                           title=doc_title, author=doc_author)
     elif duplex:
-        doc = DuplexDoc(str(pdf_path), vmargin=vmargin * cm, title=Path(md_path).stem)
+        doc = DuplexDoc(str(pdf_path), vmargin=vmargin * cm, title=doc_title, author=doc_author)
     else:
         doc = SingleColumnDoc(str(pdf_path), pagesize=page,
                               hmargin=2.1 * cm, vmargin=vmargin * cm,
-                              title=Path(md_path).stem)
+                              title=doc_title, author=doc_author)
     avail = doc.colw if twocol else doc.width
 
     captions = {}
