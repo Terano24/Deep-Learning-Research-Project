@@ -80,7 +80,8 @@ On the same held-out test split (4,641 pairs):
 |---|---|---|
 | Ours | 0.832 | 0.769 |
 | Gradient boosting | 0.810 | 0.721 |
-| DeepImmuno | 0.792 | 0.661 |
+| DeepImmuno architecture, retrained here | 0.792 | 0.661 |
+| DeepImmuno (released checkpoint) | 0.606 | 0.633 |
 | **Allele prior (no peptide info)** | **0.752** | 0.500 |
 | BigMHC_IM | 0.647 | 0.609 |
 | MixMHCpred (binding only) | 0.559 | 0.570 |
@@ -92,8 +93,9 @@ score below a peptide-blind baseline. Our margin over BigMHC is evidence of the 
 → `results/external_baselines.json`
 
 ### 3.5 DeepImmuno memorisation
-**37.5%** of our test peptides are in DeepImmuno's training set. It scores **0.835** on
-those and **0.763** on ones it never saw — a 0.072 gap. Its published figure is 0.85.
+**37.5%** of our test peptides are in DeepImmuno's training set. The released checkpoint
+scores **0.746** on those and **0.512** on ones it never saw — a 0.234 gap, with the unseen
+figure at chance. Its published figure is 0.85.
 → `results/fair_vs_deepimmuno.json`
 
 ### 3.6 Mitigations: the simple fix wins

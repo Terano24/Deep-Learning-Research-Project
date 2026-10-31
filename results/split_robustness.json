@@ -1,0 +1,376 @@
+{
+  "n_pairs": 31274,
+  "n_studies": 1365,
+  "folds": 5,
+  "homology": {
+    "d1": {
+      "n_clusters": 20898,
+      "largest_cluster_share_of_pairs": 0.004988169086141843,
+      "singleton_share_of_clusters": 0.7101158005550771
+    },
+    "d2": {
+      "n_clusters": 20463,
+      "largest_cluster_share_of_pairs": 0.004988169086141843,
+      "singleton_share_of_clusters": 0.6955480623564482
+    },
+    "shared_6mer": {
+      "n_clusters": 14651,
+      "largest_cluster_share_of_pairs": 0.004092856686065102,
+      "singleton_share_of_clusters": 0.5975018770049826
+    }
+  },
+  "regimes": {
+    "random": {
+      "gbm": {
+        "pooled_auc": 0.8399070406742348,
+        "within_allele": 0.7680316252957415,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.7422958435609838,
+        "within_allele": 0.6387456645151612,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.7551902876883405,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    },
+    "peptide": {
+      "gbm": {
+        "pooled_auc": 0.825955286803855,
+        "within_allele": 0.7395253634727902,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.7394247291546814,
+        "within_allele": 0.6350892727102448,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.7557909534715297,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    },
+    "homology_d1": {
+      "gbm": {
+        "pooled_auc": 0.8161934330924561,
+        "within_allele": 0.7182400824942415,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.7359862541890214,
+        "within_allele": 0.6275491681017421,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.7541807907148684,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    },
+    "homology_d2": {
+      "gbm": {
+        "pooled_auc": 0.8182015835880324,
+        "within_allele": 0.7229156609520254,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.7364303915624625,
+        "within_allele": 0.6291321216083644,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.7533310822737779,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    },
+    "shared_6mer": {
+      "gbm": {
+        "pooled_auc": 0.8176369090862359,
+        "within_allele": 0.7236899322403098,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.7354619319732416,
+        "within_allele": 0.6277314757955283,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.7541080687184714,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    },
+    "study": {
+      "gbm": {
+        "pooled_auc": 0.6074938029321071,
+        "within_allele": 0.4346761252436283,
+        "n_scored": 31274
+      },
+      "logreg": {
+        "pooled_auc": 0.5483461350631954,
+        "within_allele": 0.40058664099151986,
+        "n_scored": 31274
+      },
+      "allele_prior": {
+        "pooled_auc": 0.4648762844883176,
+        "within_allele": null,
+        "n_scored": 31274
+      }
+    }
+  },
+  "gaps": {
+    "random_minus_study": {
+      "diff": 0.23241323774212774,
+      "ci95": [
+        0.08228152775517625,
+        0.29550343676123214
+      ]
+    },
+    "peptide_minus_study": {
+      "diff": 0.2184614838717479,
+      "ci95": [
+        0.06610544009648656,
+        0.28310429325895764
+      ]
+    },
+    "random_minus_peptide": {
+      "diff": 0.013951753870379835,
+      "ci95": [
+        0.008834456086846604,
+        0.02353573584383708
+      ]
+    },
+    "peptide_minus_shared_6mer": {
+      "diff": 0.008318377717619119,
+      "ci95": [
+        0.004938652625733406,
+        0.016522405959713514
+      ]
+    }
+  },
+  "drop_dominant": {
+    "dropped_study_pairs": 11486,
+    "n_pairs": 19788,
+    "regimes": {
+      "random": {
+        "gbm": {
+          "pooled_auc": 0.7650269734330186,
+          "within_allele": 0.7307503830718034,
+          "n_scored": 19788
+        },
+        "allele_prior": {
+          "pooled_auc": 0.6272616960947311,
+          "within_allele": null,
+          "n_scored": 19788
+        }
+      },
+      "peptide": {
+        "gbm": {
+          "pooled_auc": 0.7585481386179849,
+          "within_allele": 0.7214680697925172,
+          "n_scored": 19788
+        },
+        "allele_prior": {
+          "pooled_auc": 0.6287587621825127,
+          "within_allele": null,
+          "n_scored": 19788
+        }
+      },
+      "study": {
+        "gbm": {
+          "pooled_auc": 0.673196948087312,
+          "within_allele": 0.627016754501115,
+          "n_scored": 19788
+        },
+        "allele_prior": {
+          "pooled_auc": 0.5564943847418423,
+          "within_allele": null,
+          "n_scored": 19788
+        }
+      }
+    },
+    "gaps": {
+      "random_minus_study": {
+        "diff": 0.09183002534570661,
+        "ci95": [
+          0.06631009157181535,
+          0.11766385264546475
+        ]
+      },
+      "peptide_minus_study": {
+        "diff": 0.08535119053067286,
+        "ci95": [
+          0.0608917971772458,
+          0.11055119860140754
+        ]
+      }
+    }
+  },
+  "assay_strata": {
+    "ELISPOT": {
+      "n_pairs": 16888,
+      "n_studies": 285,
+      "regimes": {
+        "random": {
+          "gbm": {
+            "pooled_auc": 0.8912652787052581,
+            "within_allele": 0.7625440806458778,
+            "n_scored": 16888
+          },
+          "allele_prior": {
+            "pooled_auc": 0.825455750254128,
+            "within_allele": null,
+            "n_scored": 16888
+          }
+        },
+        "peptide": {
+          "gbm": {
+            "pooled_auc": 0.8749296039841935,
+            "within_allele": 0.7161351055424449,
+            "n_scored": 16888
+          },
+          "allele_prior": {
+            "pooled_auc": 0.8256905348159835,
+            "within_allele": null,
+            "n_scored": 16888
+          }
+        },
+        "study": {
+          "gbm": {
+            "pooled_auc": 0.652232420975137,
+            "within_allele": 0.3718392587043397,
+            "n_scored": 16888
+          },
+          "allele_prior": {
+            "pooled_auc": 0.40187434121982635,
+            "within_allele": null,
+            "n_scored": 16888
+          }
+        }
+      }
+    },
+    "multimer/tetramer": {
+      "n_pairs": 6273,
+      "n_studies": 174,
+      "regimes": {
+        "random": {
+          "gbm": {
+            "pooled_auc": 0.817972345601857,
+            "within_allele": 0.7721551096148045,
+            "n_scored": 6273
+          },
+          "allele_prior": {
+            "pooled_auc": 0.679011673325447,
+            "within_allele": null,
+            "n_scored": 6273
+          }
+        },
+        "peptide": {
+          "gbm": {
+            "pooled_auc": 0.8095933308037409,
+            "within_allele": 0.7624852032266731,
+            "n_scored": 6273
+          },
+          "allele_prior": {
+            "pooled_auc": 0.6808222105662567,
+            "within_allele": null,
+            "n_scored": 6273
+          }
+        },
+        "study": {
+          "gbm": {
+            "pooled_auc": 0.6493060732540232,
+            "within_allele": 0.5889791582688644,
+            "n_scored": 6273
+          },
+          "allele_prior": {
+            "pooled_auc": 0.4831018012186683,
+            "within_allele": null,
+            "n_scored": 6273
+          }
+        }
+      }
+    },
+    "ICS": {
+      "n_pairs": 1343,
+      "n_studies": 100,
+      "regimes": {
+        "random": {
+          "gbm": {
+            "pooled_auc": 0.8382249172060816,
+            "within_allele": 0.7657491092787991,
+            "n_scored": 1343
+          },
+          "allele_prior": {
+            "pooled_auc": 0.7522874172060816,
+            "within_allele": null,
+            "n_scored": 1343
+          }
+        },
+        "peptide": {
+          "gbm": {
+            "pooled_auc": 0.7263731559536355,
+            "within_allele": 0.5963687576441107,
+            "n_scored": 1343
+          },
+          "allele_prior": {
+            "pooled_auc": 0.7501034923980129,
+            "within_allele": null,
+            "n_scored": 1343
+          }
+        },
+        "study": {
+          "gbm": {
+            "pooled_auc": 0.4516831627276833,
+            "within_allele": 0.28560235994365674,
+            "n_scored": 1343
+          },
+          "allele_prior": {
+            "pooled_auc": 0.429936822595213,
+            "within_allele": null,
+            "n_scored": 1343
+          }
+        }
+      }
+    }
+  },
+  "temporal": {
+    "n_dated": 18095,
+    "n_train": 14484,
+    "n_test": 3611,
+    "cutoff_pmid": 36211805,
+    "test_studies": 218,
+    "test_share_positive": 0.6452506230960953,
+    "test_top10_study_share": 0.49736914981999447,
+    "test_largest_study_pairs": 274,
+    "gbm": {
+      "pooled_auc": 0.5633894858161375,
+      "pooled_auc_ci95": [
+        0.44249988263394235,
+        0.6838220051383305
+      ],
+      "within_allele": 0.5614742346440875
+    },
+    "logreg": {
+      "pooled_auc": 0.5362387887681632,
+      "pooled_auc_ci95": [
+        0.41224666057106535,
+        0.6712402987410145
+      ],
+      "within_allele": 0.5539827408190853
+    },
+    "allele_prior": {
+      "pooled_auc": 0.457204671779357,
+      "pooled_auc_ci95": [
+        0.38099412986534026,
+        0.5547462129382468
+      ],
+      "within_allele": null
+    }
+  }
+}

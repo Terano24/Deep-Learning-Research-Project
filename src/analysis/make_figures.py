@@ -54,7 +54,8 @@ plt.rcParams.update({
 # greyscale steps: light -> dark, used as an ordered sequence, never cycled
 G = {'light': '0.82', 'mid': '0.58', 'dark': '0.30', 'ink': '0.12'}
 CHANCE = 0.5
-CLAIMS = (0.85, 0.90)   # performance range reported in the literature
+CLAIMS = (0.85, 0.943)  # reported under random cross-validation; see Table 1 of the
+                        # manuscript and data/external/reported_performance.csv
 # labels that sit on top of a reference line punch a hole in it rather than cross it
 KNOCKOUT = dict(facecolor='white', edgecolor='none', pad=1.2)
 
@@ -328,6 +329,9 @@ def fig2_ceiling_and_performance():
                  fontsize=pt(7.2, 6.0), color=G['ink'])
     axa.annotate('chance', xy=(CHANCE, ytop), ha='center', va='bottom',
                  fontsize=pt(7.2, 6.0), color=G['ink'], zorder=5, bbox=KNOCKOUT)
+    # the two panels are far apart vertically, so panel (a) carries its own tick
+    # labels rather than making the reader track down to panel (b)'s axis
+    axa.tick_params(axis='x', labelbottom=True, labelsize=pt(8, 6.5))
     axa.set_yticks(ypos)
     axa.set_yticklabels(labels, fontsize=pt(8, 6.2))
     axa.set_ylim(y + 0.5, ytop + pt(2.4, 3.0))

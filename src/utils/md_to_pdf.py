@@ -18,14 +18,14 @@ from pathlib import Path
 from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (BaseDocTemplate, Frame, HRFlowable, Image as RLImage,
-                                KeepTogether, PageBreak, PageTemplate, Paragraph,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (BaseDocTemplate, Frame, FrameBreak, HRFlowable,
+                                Image as RLImage, KeepTogether, PageBreak, PageTemplate,
+                                Paragraph, Spacer, Table, TableStyle)
 
 FONT_CANDIDATES = [
     ('DejaVuSans', 'DejaVuSans-Bold', 'DejaVuSans-Oblique',
@@ -91,7 +91,7 @@ def styles(compact=False):
     """compact=True tightens type for two-column layout, where measure is ~8 cm."""
     ss = getSampleStyleSheet()
     f = 8.4 if compact else 9.6
-    base = dict(fontName=REG, leading=f * 1.32, fontSize=f)
+    base = dict(fontName=REG, leading=f * 1.32, fontSize=f, allowWidows=0, allowOrphans=0)
     return {
         'title': ParagraphStyle('t', parent=ss['Title'], fontName=BOLD,
                                 fontSize=15 if compact else 16,
@@ -100,14 +100,17 @@ def styles(compact=False):
                                   alignment=TA_CENTER, spaceAfter=4),
         'h1': ParagraphStyle('h1', fontName=BOLD, fontSize=10.5 if compact else 13,
                              leading=13 if compact else 16,
-                             spaceBefore=12 if compact else 16, spaceAfter=5 if compact else 7, textColor=colors.black),
+                             spaceBefore=11 if compact else 14, spaceAfter=4 if compact else 6,
+                             keepWithNext=True, textColor=colors.black),
         'h2': ParagraphStyle('h2', fontName=BOLD, fontSize=9.4 if compact else 11,
                              leading=12 if compact else 14,
-                             spaceBefore=9 if compact else 12, spaceAfter=4 if compact else 5, textColor=colors.black),
+                             spaceBefore=8 if compact else 10, spaceAfter=3.5 if compact else 4.5,
+                             keepWithNext=True, textColor=colors.black),
         'h3': ParagraphStyle('h3', fontName=BOLD, fontSize=8.8 if compact else 10,
                              leading=11.5 if compact else 13,
-                             spaceBefore=7 if compact else 9, spaceAfter=3 if compact else 4),
-        'body': ParagraphStyle('b', alignment=TA_JUSTIFY, spaceAfter=4.5 if compact else 6, **base),
+                             spaceBefore=6 if compact else 8, spaceAfter=2.5 if compact else 3.5,
+                             keepWithNext=True, textColor=colors.black),
+        'body': ParagraphStyle('b', alignment=TA_JUSTIFY, spaceAfter=4.5 if compact else 5.5, **base),
         'li': ParagraphStyle('li', alignment=TA_JUSTIFY, leftIndent=14, bulletIndent=4,
                              spaceAfter=2 if compact else 3, bulletFontName=REG, bulletFontSize=9.6, **base),
         'quote': ParagraphStyle('q', leftIndent=16, rightIndent=10, fontName=ITAL,
@@ -125,8 +128,13 @@ def styles(compact=False):
         'caption': ParagraphStyle('cap', fontName=REG, fontSize=6.8 if compact else 8.2,
                                   leading=8.5 if compact else 10.5,
                                   spaceBefore=2 if compact else 3,
-                                  spaceAfter=4 if compact else 8, alignment=TA_JUSTIFY,
+                                  spaceAfter=2 if compact else 3, alignment=TA_JUSTIFY,
                                   textColor=colors.black),
+        'tcaption': ParagraphStyle('tcap', fontName=REG, fontSize=6.8 if compact else 8.5,
+                                   leading=8.8 if compact else 11.0,
+                                   spaceBefore=2 if compact else 3,
+                                   spaceAfter=3 if compact else 4, alignment=TA_JUSTIFY,
+                                   keepWithNext=True, textColor=colors.black),
     }
 
 
@@ -142,7 +150,7 @@ def list_item_text(lines, i, first):
     """
     parts, i = [first], i + 1
     while i < len(lines) and lines[i].strip() and lines[i][:1].isspace() \
-            and not re.match(r'^\s*([-*+]|\d+[.)])\s', lines[i]):
+            and not re.match(r'^\s*([-*+]|\d{1,2}[.)])\s', lines[i]):
         parts.append(lines[i].strip())
         i += 1
     return ' '.join(parts), i
@@ -198,7 +206,140 @@ def build_table(rows, st, width):
     return t
 
 
-class DuplexDoc(BaseDocTemplate):
+class FloatBlock(KeepTogether):
+    """Atomic figure or table+caption block that floats to the top of the next frame
+    when it does not fit in the remaining space of the current frame, allowing
+    subsequent prose to fill the current page or column first."""
+    is_float = True
+
+    def __init__(self, content, *args, **kwargs):
+        for c in content:
+            c._in_float = True
+        KeepTogether.__init__(self, content, *args, **kwargs)
+
+
+class LayoutDoc(BaseDocTemplate):
+    """Base document template with LaTeX-like [ht] floating for figures/tables and
+    orphan-free section headings."""
+
+    def __init__(self, *args, **kwargs):
+        BaseDocTemplate.__init__(self, *args, **kwargs)
+        self._deferred = []
+
+    def _rem_h(self):
+        return self.frame._y - self.frame._y1
+
+    def _fits(self, fl):
+        rem = self._rem_h()
+        s = 0 if self.frame._atTop else fl.getSpaceBefore()
+        _, h = fl.wrapOn(self.canv, self.frame._aW, rem)
+        true_h = getattr(fl, '_H', h)
+        return (true_h + s) <= (rem - 1.0)
+
+    def handle_flowable(self, flowables):
+        if getattr(self, 'frame', None) is None or flowables is getattr(self, '_hanging', None):
+            BaseDocTemplate._handle_flowable(self, flowables)
+            return
+
+        if flowables and getattr(flowables[0], '_in_float', False):
+            BaseDocTemplate._handle_flowable(self, flowables)
+            if not flowables and self._deferred:
+                flowables.append(FrameBreak())
+                flowables.extend(self._deferred)
+                self._deferred.clear()
+            return
+
+        if self._deferred and (self.frame._atTop or self._fits(self._deferred[0])):
+            for fl in flowables[:3]:
+                if hasattr(fl, '_postponed'):
+                    delattr(fl, '_postponed')
+            flowables.insert(0, self._deferred.pop(0))
+            BaseDocTemplate._handle_flowable(self, flowables)
+            if not flowables and self._deferred:
+                flowables.append(FrameBreak())
+                flowables.extend(self._deferred)
+                self._deferred.clear()
+            return
+
+        if not flowables:
+            return
+
+        f = flowables[0]
+
+        if getattr(f, 'is_barrier', False) and self._deferred:
+            flowables[0:0] = self._deferred
+            self._deferred.clear()
+            if not self.frame._atTop and not self._fits(flowables[0]):
+                flowables.insert(0, FrameBreak())
+            BaseDocTemplate._handle_flowable(self, flowables)
+            return
+
+        if getattr(f, 'is_float', False) and not self.frame._atTop and not self._fits(f):
+            k = 0
+            while k < len(flowables) and getattr(flowables[k], 'is_float', False):
+                k += 1
+            if k < len(flowables) and not getattr(flowables[k], 'is_barrier', False):
+                self._deferred.extend(flowables[:k])
+                del flowables[:k]
+                f = flowables[0]
+            else:
+                if self._deferred:
+                    flowables[0:0] = self._deferred
+                    self._deferred.clear()
+                flowables.insert(0, FrameBreak())
+                BaseDocTemplate._handle_flowable(self, flowables)
+                return
+
+        if getattr(f, 'is_heading', False) and not self.frame._atTop:
+            rem = self._rem_h()
+            req_h = 0
+            idx = 0
+            while idx < len(flowables) and getattr(flowables[idx], 'is_heading', False):
+                fl = flowables[idx]
+                s = fl.getSpaceBefore() if (idx > 0 or not self.frame._atTop) else 0
+                _, h = fl.wrapOn(self.canv, self.frame._aW, rem)
+                req_h += s + h + fl.getSpaceAfter()
+                idx += 1
+            req_h += 28
+            if req_h > rem:
+                flowables.insert(0, FrameBreak())
+                BaseDocTemplate._handle_flowable(self, flowables)
+                return
+
+        BaseDocTemplate._handle_flowable(self, flowables)
+        if not flowables and self._deferred:
+            flowables.append(FrameBreak())
+            flowables.extend(self._deferred)
+            self._deferred.clear()
+
+
+class SingleColumnDoc(LayoutDoc):
+    """Single-column layout with centred page numbers on pages 2+."""
+
+    def __init__(self, filename, pagesize=A4, hmargin=2.1 * cm, vmargin=2.0 * cm, title=None):
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+                           leftMargin=hmargin, rightMargin=hmargin,
+                           topMargin=vmargin, bottomMargin=vmargin)
+        w = pagesize[0] - 2 * hmargin
+        h = pagesize[1] - 2 * vmargin
+        self.addPageTemplates([
+            PageTemplate(id='main', frames=[Frame(hmargin, vmargin, w, h, id='f',
+                                                  leftPadding=0, rightPadding=0,
+                                                  topPadding=0, bottomPadding=0)],
+                         onPage=self._folio),
+        ])
+
+    def _folio(self, canvas, doc):
+        n = canvas.getPageNumber()
+        if n <= 1:
+            return
+        canvas.saveState()
+        canvas.setFont(REG, 8.5)
+        canvas.drawCentredString(self.pagesize[0] / 2.0, self.bottomMargin * 0.55, str(n))
+        canvas.restoreState()
+
+
+class DuplexDoc(LayoutDoc):
     """Mirrored margins for double-sided printing.
 
     Odd (right-hand) pages get the wider margin on the left, even pages on the right, so
@@ -208,15 +349,19 @@ class DuplexDoc(BaseDocTemplate):
 
     def __init__(self, filename, pagesize=A4, inner=2.6 * cm, outer=1.9 * cm,
                  vmargin=2.0 * cm, title=None):
-        BaseDocTemplate.__init__(self, filename, pagesize=pagesize, title=title,
-                                 leftMargin=inner, rightMargin=outer,
-                                 topMargin=vmargin, bottomMargin=vmargin)
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+                           leftMargin=inner, rightMargin=outer,
+                           topMargin=vmargin, bottomMargin=vmargin)
         w = pagesize[0] - inner - outer
         h = pagesize[1] - 2 * vmargin
         self.addPageTemplates([
-            PageTemplate(id='odd', frames=[Frame(inner, vmargin, w, h, id='f')],
+            PageTemplate(id='odd', frames=[Frame(inner, vmargin, w, h, id='f',
+                                                 leftPadding=0, rightPadding=0,
+                                                 topPadding=0, bottomPadding=0)],
                          onPage=self._folio),
-            PageTemplate(id='even', frames=[Frame(outer, vmargin, w, h, id='f')],
+            PageTemplate(id='even', frames=[Frame(outer, vmargin, w, h, id='f',
+                                                  leftPadding=0, rightPadding=0,
+                                                  topPadding=0, bottomPadding=0)],
                          onPage=self._folio),
         ])
 
@@ -238,7 +383,7 @@ class DuplexDoc(BaseDocTemplate):
         self._handle_nextPageTemplate('even' if self.page % 2 else 'odd')
 
 
-class TwoColumnDoc(BaseDocTemplate):
+class TwoColumnDoc(LayoutDoc):
     """Two-column layout, as used by machine-learning preprints.
 
     Text fills the left column, then continues in the right. The title block spans the
@@ -249,9 +394,9 @@ class TwoColumnDoc(BaseDocTemplate):
     def __init__(self, filename, pagesize=A4, vmargin=2.0 * cm, gutter=0.7 * cm,
                  inner=2.0 * cm, outer=2.0 * cm, duplex=False, title=None,
                  banner_h=3.4 * cm):
-        BaseDocTemplate.__init__(self, filename, pagesize=pagesize, title=title,
-                                 leftMargin=inner, rightMargin=outer,
-                                 topMargin=vmargin, bottomMargin=vmargin)
+        LayoutDoc.__init__(self, filename, pagesize=pagesize, title=title,
+                           leftMargin=inner, rightMargin=outer,
+                           topMargin=vmargin, bottomMargin=vmargin)
         self._mirror = duplex
         pw, ph = pagesize
         h = ph - 2 * vmargin
@@ -294,7 +439,13 @@ class TwoColumnDoc(BaseDocTemplate):
             self._handle_nextPageTemplate('even' if self.page % 2 else 'odd')
 
 
-def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_figures=False):
+def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_figures=False,
+           letter=False, preprint=False):
+    # A4 is the default everywhere: it is what the target journal and most non-US
+    # venues expect. --letter exists only for destinations that ask for US Letter
+    # specifically (bioRxiv's own upload tips name it), and only the single-column
+    # path honours it, since that is the only layout a preprint upload uses.
+    page = LETTER if letter else A4
     st = styles(compact=twocol)
     lines = Path(md_path).read_text(encoding='utf-8').split('\n')
     if twocol:
@@ -303,10 +454,9 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
     elif duplex:
         doc = DuplexDoc(str(pdf_path), vmargin=vmargin * cm, title=Path(md_path).stem)
     else:
-        doc = SimpleDocTemplate(str(pdf_path), pagesize=A4,
-                                leftMargin=2.1 * cm, rightMargin=2.1 * cm,
-                                topMargin=vmargin * cm, bottomMargin=vmargin * cm,
-                                title=Path(md_path).stem)
+        doc = SingleColumnDoc(str(pdf_path), pagesize=page,
+                              hmargin=2.1 * cm, vmargin=vmargin * cm,
+                              title=Path(md_path).stem)
     avail = doc.colw if twocol else doc.width
 
     captions = {}
@@ -354,25 +504,26 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
         im = PILImage.open(p)
         w, h = im.size
         aspect = h / w
+        fig_w = avail if twocol else avail * (0.90 if f_num == 1 else 0.88)
+        img_flow = RLImage(str(p), width=fig_w, height=fig_w * aspect)
+        img_flow.hAlign = 'CENTER'
         # a caption that flows into the next column is worse than a short column:
-        # the image and its caption travel as one block
+        # the image and its caption travel as one float block
         return [
-            Spacer(1, 2 if twocol else 4),
-            KeepTogether([RLImage(str(p), width=avail, height=avail * aspect),
-                          Paragraph(inline(captions[f_num]), st['caption'])]),
-            Spacer(1, 4 if twocol else 6)
+            FloatBlock([
+                Spacer(1, 2 if twocol else 3),
+                img_flow,
+                Paragraph(inline(captions[f_num]), st['caption']),
+                Spacer(1, 4 if twocol else 6),
+            ])
         ]
 
     flow = []
     pending_figs = []
+    pending_table_caption = None
 
     def flush_pending_figs():
-        """Figures go at the end of the subsection that first cites them.
-
-        Placing one at its callout leaves whatever is left of the column empty,
-        because a figure taller than the remaining space has to start the next
-        column. Letting the section's prose finish first fills that column.
-        """
+        """Emit queued FloatBlocks for figures cited in the preceding subsection."""
         while pending_figs:
             flow.extend(make_fig_flow(pending_figs.pop(0)))
 
@@ -387,6 +538,15 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
             continue
 
         if with_figures and s == '## Figures':
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith('## '):
+                i += 1
+            continue
+
+        # Highlights are an Elsevier submission item, not a preprint convention: they
+        # appear in about 4% of bioRxiv preprints. The journal build keeps them; the
+        # preprint build drops the section and its bullets.
+        if preprint and s.lower().startswith('## highlights'):
             i += 1
             while i < len(lines) and not lines[i].strip().startswith('## '):
                 i += 1
@@ -411,23 +571,39 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
             # Tables are never swapped out for a figure. Where a result is adequately
             # stated by its table there is no figure to swap in: the figure set is
             # restricted to displays a table cannot replace (see make_figures.py).
-            flow.append(Spacer(1, 3))
-            flow.append(build_table(rows, st, avail))
-            flow.append(Spacer(1, 8))
+            tbl = build_table(rows, st, avail)
+            if pending_table_caption is not None:
+                flow.append(FloatBlock([
+                    pending_table_caption,
+                    tbl,
+                    Spacer(1, 5 if twocol else 7),
+                ]))
+                pending_table_caption = None
+            else:
+                flow.append(FloatBlock([
+                    Spacer(1, 2),
+                    tbl,
+                    Spacer(1, 5 if twocol else 7),
+                ]))
             continue
+
+        if pending_table_caption is not None:
+            flow.append(pending_table_caption)
+            pending_table_caption = None
 
         m = re.match(r'^(#{1,6})\s+(.*)$', s)
         if m:
             level, text = len(m.group(1)), m.group(2)
-            if with_figures and twocol and s.startswith('### 3.6') and 2 not in inserted_figs:
-                pending_figs.append(2)
-                inserted_figs.add(2)
             flush_pending_figs()
             if level == 1 and first_h1:
                 flow.append(Paragraph(inline(text), st['title']))
                 first_h1 = False
             else:
-                flow.append(Paragraph(inline(text), st[f'h{min(level,3)}']))
+                p_head = Paragraph(inline(text), st[f'h{min(level,3)}'])
+                p_head.is_heading = True
+                if text.lower().startswith(('data and code', 'references', 'credit ')):
+                    p_head.is_barrier = True
+                flow.append(p_head)
             i += 1
             continue
 
@@ -457,7 +633,7 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
             flow.append(Paragraph(inline(text), st['li'], bulletText='\u2022'))
             continue
 
-        m = re.match(r'^(\d+)[.)]\s+(.*)$', s)
+        m = re.match(r'^(\d{1,2})[.)]\s+(.*)$', s)
         if m:
             text, i = list_item_text(lines, i, m.group(2))
             flow.append(Paragraph(inline(text), st['li'],
@@ -466,10 +642,19 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
 
         buf = []
         while i < len(lines) and lines[i].strip() and not re.match(
-                r'^(#{1,6}\s|\||>|[-*+]\s|\d+[.)]\s|---$)', lines[i].strip()):
+                r'^(#{1,6}\s|\||>|[-*+]\s|\d{1,2}[.)]\s|---$)', lines[i].strip()):
             buf.append(lines[i].strip())
             i += 1
         para = ' '.join(buf)
+
+        if re.match(r'^\*\*Table\s+\d+\.', para):
+            j = i
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines) and lines[j].strip().startswith('|'):
+                pending_table_caption = Paragraph(inline(para), st['tcaption'])
+                continue
+
         # a centred author/affiliation block sits right under the title
         style = st['authors'] if len(flow) < 4 and para.startswith('**') else st['body']
         flow.append(Paragraph(inline(para), style))
@@ -477,12 +662,8 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
         if with_figures:
             for f_num in sorted(fig_files):
                 if f'**Figure {f_num}**' in para and f_num not in inserted_figs:
-                    if f_num == 2 and twocol:
-                        # Defer Figure 2 to after section 3.5 so Page 2 Column 2 fills with text
-                        pass
-                    else:
-                        pending_figs.append(f_num)
-                        inserted_figs.add(f_num)
+                    pending_figs.append(f_num)
+                    inserted_figs.add(f_num)
 
     flush_pending_figs()
     doc.build(flow)
@@ -490,17 +671,28 @@ def convert(md_path, pdf_path, vmargin=2.0, duplex=False, twocol=False, with_fig
 
 
 if __name__ == '__main__':
-    FLAGS = {'--duplex', '--twocol', '--figures'}
+    FLAGS = {'--duplex', '--twocol', '--figures', '--letter', '--preprint'}
     duplex = '--duplex' in sys.argv          # mirrored margins for double-sided printing
     twocol = '--twocol' in sys.argv          # two-column layout, as used by ML preprints
     with_figures = '--figures' in sys.argv    # embed figures inline
+    letter = '--letter' in sys.argv          # US Letter instead of A4 (single-column only)
+    preprint = '--preprint' in sys.argv      # drop Elsevier-only Highlights for bioRxiv
     args = [a for a in sys.argv[1:] if a not in FLAGS]
     src = args[0] if args else 'docs/MANUSCRIPT.md'
-    dst = args[1] if len(args) > 1 else str(Path(src).with_suffix('.pdf'))
+    # Without a suffix every variant would default to MANUSCRIPT.pdf and silently
+    # overwrite the journal build, so the layout flags name themselves.
+    suffix = ''.join(s for s, on in [('_2col', twocol),
+                                     ('_figures', with_figures and twocol),
+                                     ('_preprint', preprint)] if on)
+    dst = args[1] if len(args) > 1 else str(
+        Path(src).with_name(Path(src).stem + suffix).with_suffix('.pdf'))
     # optional third positional argument: top/bottom margin in cm (default 2.0)
     vm = float(args[2]) if len(args) > 2 else 2.0
-    out = convert(src, dst, vmargin=vm, duplex=duplex, twocol=twocol, with_figures=with_figures)
-    tags = ' '.join(t for t, on in [('[two-column]', twocol),
+    out = convert(src, dst, vmargin=vm, duplex=duplex, twocol=twocol, with_figures=with_figures,
+                 letter=letter, preprint=preprint)
+    tags = ' '.join(t for t, on in [('[preprint]', preprint),
+                                    ('[two-column]', twocol),
                                     ('[double-sided]', duplex),
-                                    ('[with-figures]', with_figures)] if on)
+                                    ('[with-figures]', with_figures),
+                                    ('[US Letter]', letter)] if on)
     print('wrote', out, f'({Path(out).stat().st_size:,} bytes)', tags)

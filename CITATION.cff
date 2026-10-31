@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 title: >-
-  Leakage, Label Noise, and Overestimated Performance in T-Cell Epitope
-  Immunogenicity Prediction
+  Label Reliability and Study-Level Leakage Bound Measurable Performance in
+  T-Cell Epitope Immunogenicity Prediction
 message: >-
   If you use this software, data or the benchmark protocol, please cite the
   archived release.
@@ -34,8 +34,9 @@ abstract: >-
   of 0.85-0.90 on data derived from the Immune Epitope Database. This repository
   measures how much of that reflects transferable biology and how much reflects
   the structure of the benchmark. Holding out data by peptide, the field's
-  standard precaution, is shown to be indistinguishable from not splitting at
-  all, while grouping by source publication reduces AUC to 0.607; a baseline
+  standard precaution, is shown to lower AUC by only 0.014 relative to
+  random splitting, while grouping by source publication reduces AUC to 0.607;
+  sequence similarity is shown not to be the cause; a baseline
   using allele identity alone, with no peptide information, outscores every
   published predictor tested; two published predictors are shown to have been
   trained on 37.5% and 27.1% of the evaluation pairs; and the agreement between

@@ -76,7 +76,10 @@ python -m src.analysis.robustness --folds 5  # H2/H3/H4: mitigation schemes comp
 python -m src.analysis.external_validation # TRAP: does the effect generalise?
 python -m src.analysis.fair_vs_deepimmuno  # contamination-aware DeepImmuno comparison
 python -m src.analysis.external_baselines  # BigMHC / MixMHCpred / DeepImmuno
+python -m src.analysis.lung_benchmark      # every predictor on the lung pairs, plus contamination
+python -m src.analysis.split_robustness    # is the grouping-unit finding robust? (about 5 minutes)
 python -m src.analysis.feature_ablation    # do self-similarity features help?
+python -m src.analysis.check_manuscript    # does every headline number match results/*.json?
 ```
 
 ## 4. External baselines
@@ -109,12 +112,42 @@ Windows. Paths are passed to it as msys (`/c/Users/...`) rather than Windows pat
 `cygpath` conversion in `lib/run_PRIME.pl` fixes that but does not fix the binary.
 Recompiling `lib/PRIME.cc` on Linux is the likely route if this baseline is wanted.
 
+## 5. Figures
+
+```bash
+python -m src.analysis.make_figures              # Figures 1 and 2, full-width and column
+python -m src.analysis.make_graphical_abstract   # graphical abstract, 13 x 5 cm
+```
+
+## 6. Manuscript PDFs
+
+```bash
+python -m src.utils.md_to_pdf docs/MANUSCRIPT.md docs/MANUSCRIPT.pdf
+python -m src.utils.md_to_pdf --twocol docs/MANUSCRIPT.md docs/MANUSCRIPT_2col.pdf
+python -m src.utils.md_to_pdf --twocol --figures docs/MANUSCRIPT.md docs/MANUSCRIPT_2col_figures.pdf
+python -m src.utils.md_to_pdf --figures --preprint docs/MANUSCRIPT.md docs/MANUSCRIPT_preprint.pdf
+```
+
+`--preprint` drops the Highlights section. Highlights are an Elsevier submission item; a
+sample of 70 recent bioRxiv preprints found them in 4%, so the preprint build omits them
+while the journal builds keep them. Run `python -m src.analysis.check_manuscript` before
+rebuilding: it verifies 45 reported numbers against `results/*.json`, checks that the two
+ceiling scripts agree, and cross-checks every author-year citation against the reference
+list.
+
+Both read their numbers from `results/*.json`, so a figure cannot drift from the analysis
+behind it. The graphical abstract takes the label-reliability band from the same keys the
+manuscript quotes (`ceiling_robustness.json`, `H3_rules.majority` and
+`H2_by_n_studies`) and its leakage-free point from `make_figures._model_rows`, the
+function that draws Figure 2b, so the two cannot disagree. Output goes to `docs/figures/`
+as PDF, PNG and TIFF.
+
 ## Known limitations
 
 - Peptide lengths are restricted to 9 and 10, inherited from the DeepImmuno encoding.
 - BigMHC's immunogenicity training set (Mendeley `10.17632/dvmz6pkzvb`) is included as
-  `data/external/bigmhc_im_train.csv` and is what the 26.5% overlap figure is measured
-  against. MixMHCpred's training set is not public, so it could not be audited the same
+  `data/external/bigmhc_im_train.csv` and is what the overlap figures are measured
+  against (27.1% by shared peptide, 26.5% by exact pair on the lung subset). MixMHCpred's training set is not public, so it could not be audited the same
   way.
 - The binding pretraining set is capped at 400,000 records.
 - MixMHCpred has no model for `HLA-B*4102` (1 pair in the test split, scored as missing).

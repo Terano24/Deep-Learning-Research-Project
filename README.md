@@ -1,4 +1,4 @@
-# Leakage, Label Noise, and Overestimated Performance in T-Cell Epitope Immunogenicity Prediction
+# Label Reliability and Study-Level Leakage Bound Measurable Performance in T-Cell Epitope Immunogenicity Prediction
 
 Code, data and analyses for the manuscript of the same name
 (`docs/MANUSCRIPT.pdf`). I Nyoman Agung Ananda Terano, Mirrabell Frederica Hadiwijono.
@@ -16,13 +16,18 @@ dataset, only the split changes:
 |---|---|---|
 | random rows | 0.840 | 0.857 |
 | peptide | 0.826 | 0.862 |
+| peptides sharing a 6-residue stretch | 0.818 | n/a |
 | source publication / organism | **0.607** | **0.552** |
 
-Peptide-level splitting — the field's standard precaution — scores *above* random
-splitting on the independent dataset. It is not weak protection; it is none. Holding out
-the source publication is what removes the effect, because one study contributes 37% of
-all pairs with no positive outcome among them, and 75% of studies report a single outcome
-class.
+Peptide-level splitting, the field's standard precaution, lowers AUC by only
+0.014 against random splitting on IEDB (95% CI 0.009–0.024) and scores
+*above* it on the independent dataset. Grouping peptides by sequence similarity changes
+AUC by under 0.02, so similarity is not the cause. Holding out the source publication is
+what removes the effect: one study contributes 37% of all pairs with no positive outcome
+among them, and 75% of studies report a single outcome class. That one study accounts for
+about 60% of the gap; without it the gap is 0.09 (95% CI 0.066–0.118).
+The ordering also holds with logistic regression, within single assay families, and in a
+forward-in-time test (`results/split_robustness.json`).
 
 **A baseline that cannot see the peptide beats every published predictor tested.**
 Predicting each allele's training-set positive rate, using no sequence information at
@@ -33,7 +38,7 @@ peptide–HLA pair agree at κ = 0.273, an AUC-equivalent of 0.636 (0.617–0.65
 
 **Under leakage-free evaluation** — within study and within allele, across 205 groups —
 the best model here reaches 0.573 (0.544–0.603), 84% of the conservative reliability
-bound. The original convolutional architecture is statistically indistinguishable from
+bound. The original convolutional architecture does not differ significantly from
 it.
 
 ## Verify the central claim in one command
