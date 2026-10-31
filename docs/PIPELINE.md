@@ -125,10 +125,13 @@ python -m src.analysis.make_graphical_abstract   # graphical abstract, 13 x 5 cm
 python -m src.utils.md_to_pdf docs/MANUSCRIPT.md docs/MANUSCRIPT.pdf
 python -m src.utils.md_to_pdf --twocol docs/MANUSCRIPT.md docs/MANUSCRIPT_2col.pdf
 python -m src.utils.md_to_pdf --twocol --figures docs/MANUSCRIPT.md docs/MANUSCRIPT_2col_figures.pdf
-python -m src.utils.md_to_pdf --figures --preprint docs/MANUSCRIPT.md docs/MANUSCRIPT_preprint.pdf
+python -m src.utils.md_to_pdf --letter --figures --preprint docs/MANUSCRIPT.md docs/MANUSCRIPT_preprint.pdf
 ```
 
-`--preprint` drops the Highlights section. Highlights are an Elsevier submission item; a
+`--letter` builds at US Letter (8.5x11in) instead of A4: bioRxiv's own upload tips name this
+as the standard size "to ensure successful PDF conversion," and only the single-column path
+(used here) honours the flag. `--preprint` drops the Highlights section. Highlights are an
+Elsevier submission item; a
 sample of 70 recent bioRxiv preprints found them in 4%, so the preprint build omits them
 while the journal builds keep them. Run `python -m src.analysis.check_manuscript` before
 rebuilding: it verifies 45 reported numbers against `results/*.json`, checks that the two
