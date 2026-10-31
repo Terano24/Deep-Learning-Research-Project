@@ -31,7 +31,7 @@ identifiers:
 repository-code: 'https://github.com/Terano24/Deep-Learning-Research-Project'
 abstract: >-
   Computational predictors of CD8+ T-cell epitope immunogenicity report ROC-AUC
-  of 0.85-0.90 on data derived from the Immune Epitope Database. This repository
+  of 0.85 and above on data derived from the Immune Epitope Database. This repository
   measures how much of that reflects transferable biology and how much reflects
   the structure of the benchmark. Holding out data by peptide, the field's
   standard precaution, is shown to lower AUC by only 0.014 relative to
@@ -53,5 +53,5 @@ keywords:
   - IEDB
   - machine learning evaluation
 license: MIT
-version: 1.0.0
-date-released: '2026-10-27'
+version: 1.0.1
+date-released: '2026-11-01'
