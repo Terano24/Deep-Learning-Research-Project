@@ -37,7 +37,7 @@ plt.rcParams.update({
 })
 
 G = {'light': '0.82', 'mid': '0.58', 'dark': '0.30', 'ink': '0.12'}
-CLAIMS = (0.85, 0.943)   # reported under random cross-validation (manuscript Table 1)
+CLAIMS = (0.85, 0.931)   # reported upper end, HLA-agnostic benchmark (manuscript Table 1)
 CHANCE = 0.5
 KNOCKOUT = dict(facecolor='white', edgecolor='none', pad=1.0)
 

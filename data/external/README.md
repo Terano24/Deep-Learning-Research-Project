@@ -5,7 +5,7 @@ form that does not require re-installing those predictors. Each file was produce
 running the released tool on our pairs; the scores are theirs, not ours.
 
 Before this directory existed, these analyses read from an absolute path into a
-machine-specific temporary folder, so nobody else could reproduce §3.5 or §3.6.
+machine-specific temporary folder, so nobody else could reproduce §4.5 or §4.6.
 
 | file | rows | what it is |
 |---|---|---|

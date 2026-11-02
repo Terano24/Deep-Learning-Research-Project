@@ -160,8 +160,11 @@ def citation_guard():
             if mm:
                 cites.add((norm(mm.group(1)), mm.group(2)))
     # narrative: Author et al. (2023), Author and Author (2023)
-    for pat in (r"\b(%s)(?: and %s)? et al\.\s*\(((?:19|20)\d{2})\)" % (name, name),
-                r"\b(%s) and %s\s*\(((?:19|20)\d{2})\)" % (name, name)):
+    # \s+ rather than a literal space: the manuscript is hard-wrapped, so a narrative
+    # citation can straddle a newline ("Mattsson\nand Walters (2026)"), which would
+    # otherwise read as uncited while its entry sat unused in the reference list.
+    for pat in (r"\b(%s)(?:\s+and\s+%s)?\s+et\s+al\.\s*\(((?:19|20)\d{2})\)" % (name, name),
+                r"\b(%s)\s+and\s+%s\s*\(((?:19|20)\d{2})\)" % (name, name)):
         for m in re.finditer(pat, body):
             cites.add((norm(m.group(1)), m.group(2)))
 
@@ -175,10 +178,31 @@ def citation_guard():
     return 0 if ok else 1
 
 
+def chance_correction_guard():
+    """The fraction of attainable signal must be measured from chance, not from zero.
+
+    AUC 0.5 is chance, so dividing raw AUCs overstates progress: a model with no
+    predictive signal would score 0.5/0.681 = 73% of the reliability reference. An
+    earlier draft reported 0.573/0.681 = 84% on that arithmetic. This recomputes the
+    chance-corrected figure from the same source files the manuscript quotes and
+    fails if the text drifts back to a raw ratio.
+    """
+    raw = MANUSCRIPT.read_text(encoding='utf-8')
+    cr = load('ceiling_robustness.json')
+    best = 0.573                      # leakage-free estimate, quoted in 4.8
+    ref = cr['H2_by_n_studies']['exactly 2 studies']['auc']   # conservative reference
+    pct = round(100 * (best - 0.5) / (ref - 0.5))
+    raw_pct = round(100 * best / ref)
+    ok = ('%d%%' % pct) in raw and ('%d%%' % raw_pct) not in raw
+    print('  %s chance-corrected fraction        %d%% expected (raw ratio %d%% must be absent)'
+          % ('OK      ' if ok else 'MISMATCH', pct, raw_pct))
+    return 0 if ok else 1
+
 def main():
     text = re.sub(r'\s+', ' ', MANUSCRIPT.read_text(encoding='utf-8'))
     bad = drift_guard()
     bad += citation_guard()
+    bad += chance_correction_guard()
     for label, needle in checks():
         ok = re.sub(r'\s+', ' ', needle) in text
         bad += not ok

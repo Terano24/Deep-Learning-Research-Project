@@ -122,7 +122,7 @@ python -m src.analysis.make_graphical_abstract   # graphical abstract, 13 x 5 cm
 ## 6. Manuscript PDFs
 
 ```bash
-python -m src.utils.md_to_pdf docs/MANUSCRIPT.md docs/MANUSCRIPT.pdf
+python -m src.utils.md_to_pdf --figures docs/MANUSCRIPT.md docs/MANUSCRIPT.pdf   # CBC submission copy
 python -m src.utils.md_to_pdf --twocol docs/MANUSCRIPT.md docs/MANUSCRIPT_2col.pdf
 python -m src.utils.md_to_pdf --twocol --figures docs/MANUSCRIPT.md docs/MANUSCRIPT_2col_figures.pdf
 python -m src.utils.md_to_pdf --letter --figures --preprint docs/MANUSCRIPT.md docs/MANUSCRIPT_preprint.pdf

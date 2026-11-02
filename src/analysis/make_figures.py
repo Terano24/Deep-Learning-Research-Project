@@ -54,7 +54,7 @@ plt.rcParams.update({
 # greyscale steps: light -> dark, used as an ordered sequence, never cycled
 G = {'light': '0.82', 'mid': '0.58', 'dark': '0.30', 'ink': '0.12'}
 CHANCE = 0.5
-CLAIMS = (0.85, 0.943)  # reported under random cross-validation; see Table 1 of the
+CLAIMS = (0.85, 0.931)  # reported upper end, Lee et al. HLA-agnostic benchmark; Table 1 of the
                         # manuscript and data/external/reported_performance.csv
 # labels that sit on top of a reference line punch a hole in it rather than cross it
 KNOCKOUT = dict(facecolor='white', edgecolor='none', pad=1.2)
