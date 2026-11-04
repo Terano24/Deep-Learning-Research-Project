@@ -160,6 +160,12 @@ contributions are:
 4. A leakage-free performance estimate, an architecture comparison showing the choice makes
    no measurable difference, and a worked example of a feature that standard validation
    endorses and grouped validation rejects.
+5. A released benchmark that others can evaluate against: 31,274 curated peptide–HLA pairs
+   with provenance retained, both grouping schemes precomputed, out-of-fold predictions for
+   every model and every audited third-party predictor, and a reporting protocol stating
+   which quantities a study of this kind should publish. The provenance field is the part
+   that is not recoverable afterwards, and is what makes study-level evaluation possible at
+   all; benchmarks that discard it cannot be re-audited this way.
 
 ## 2. Scope and definitions
 
