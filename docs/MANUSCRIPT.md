@@ -678,10 +678,12 @@ audited third-party predictor on our pairs, so the comparisons in §4.5 and §4.
 reproduced without installing those tools. DeepImmuno's released checkpoint is scored
 directly; `python -m src.models.deepimmuno` prints its held-out AUC in one command.
 
-Archived at Zenodo: `10.5281/zenodo.23719454` for all versions, `10.5281/zenodo.23719455`
-for v1.0.0, the release that produced every number reported here, and
-`10.5281/zenodo.23840985` for v1.0.1, which adds the consistency checks and provenance
-files behind this manuscript without changing any reported number. Repository:
+Archived at Zenodo: `10.5281/zenodo.23719454` for all versions, and
+`10.5281/zenodo.23936440` for v1.0.2, the release that matches this manuscript. Earlier
+versions are `10.5281/zenodo.23719455` (v1.0.0) and `10.5281/zenodo.23840985` (v1.0.1);
+v1.0.0 produced the underlying result files, and the later releases add the consistency
+checks, provenance files and reporting checklist without changing a reported number.
+Repository:
 `https://github.com/Terano24/Deep-Learning-Research-Project`. Code is released under the
 MIT licence; redistributed third-party data retains its own terms, listed in `LICENSE`.
 
