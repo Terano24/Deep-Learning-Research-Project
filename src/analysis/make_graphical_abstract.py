@@ -120,7 +120,9 @@ def main():
 
     for ext_ in ('pdf', 'png', 'tif'):
         out = FIGDIR / f'graphical_abstract.{ext_}'
-        fig.savefig(out, bbox_inches='tight', pad_inches=0.02)
+        # 400 dpi: Elsevier requires at least 1328 px wide, and 300 dpi at this 13 cm
+        # size gave 1202 px. Raster formats only; the PDF is vector and ignores dpi.
+        fig.savefig(out, bbox_inches='tight', pad_inches=0.02, dpi=400)
         print('wrote', out)
     plt.close(fig)
 

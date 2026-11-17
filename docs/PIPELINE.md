@@ -128,6 +128,13 @@ python -m src.utils.md_to_pdf --twocol --figures docs/MANUSCRIPT.md docs/MANUSCR
 python -m src.utils.md_to_pdf --letter --figures --preprint docs/MANUSCRIPT.md docs/MANUSCRIPT_preprint.pdf
 ```
 
+The journal does not accept a PDF as the manuscript source, so the files actually uploaded to
+Computational Biology and Chemistry are built separately:
+
+```bash
+python -m src.utils.md_to_docx     # docs/submission/: Manuscript, Highlights, Title_page (.docx), Figure_1/2, Graphical_abstract
+```
+
 `--letter` builds at US Letter (8.5x11in) instead of A4: bioRxiv's own upload tips name this
 as the standard size "to ensure successful PDF conversion," and only the single-column path
 (used here) honours the flag. `--preprint` drops the Highlights section. Highlights are an

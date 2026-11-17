@@ -17,3 +17,21 @@ data/raw/
 
 # the external predictor outputs are inputs to the published analyses, not derived data
 !data/external/*.csv
+
+# Manuscript working files (local only). The paper is under peer review; the repository
+# keeps what the paper cites (docs/PIPELINE.md, docs/DOME_CHECKLIST.md, docs/MANUSCRIPT.md,
+# docs/figures/) and leaves the writing process on the author's machine.
+docs/submission/
+docs/MANUSCRIPT.pdf
+docs/MANUSCRIPT_2col.pdf
+docs/MANUSCRIPT_2col_figures.pdf
+docs/MANUSCRIPT_preprint.pdf
+docs/MANUSCRIPT.pre_humanize.md
+docs/FOR_MIRRABELL.md
+docs/FOR_MIRRABELL.pdf
+docs/PROJECT_LOG.md
+
+# Instructions for AI agents working on this machine
+CLAUDE.md
+AGENTS.md
+.agents/

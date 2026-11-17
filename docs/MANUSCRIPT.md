@@ -4,14 +4,15 @@
 
 ## Abstract
 
-Predictors of CD8⁺ T-cell epitope immunogenicity report ROC-AUC values of 0.85 and above
-under random cross-validation on Immune Epitope Database (IEDB) data, and are used to
-prioritise vaccine candidates. We ask what those labels can support, and how benchmark construction shapes the
-result. Among 65,732 human MHC-I T-cell assay records, 2,914 peptide–HLA pairs were assayed
-independently by two or more publications; one laboratory's outcome predicts another's with
-72.2% agreement, κ of 0.273, and an AUC-equivalent of 0.636 (95% CI 0.617–0.657), or
-0.681 for pairs assayed by exactly two studies. Because a repeat experiment observes the
-biology directly, reported performance exceeds what these labels can measure. Peptide
+Vaccine candidates are prioritised with predictors of CD8⁺ T-cell epitope immunogenicity,
+which report ROC-AUC of 0.85 and above under random cross-validation on Immune Epitope
+Database (IEDB) data. We ask what those labels can support, and how benchmark construction
+shapes the result. Of 65,732 human MHC-I T-cell assay records, 2,914 peptide–HLA pairs were
+tested independently by two or more publications. One laboratory's result predicts
+another's with 72.2% agreement and κ of 0.273, an AUC-equivalent of 0.636 (95% CI
+0.617–0.657), or 0.681 for pairs tested by exactly two studies. A repeat experiment
+observes the biology directly, so performance above these figures exceeds what the labels
+can measure. Peptide
 splitting, the field's standard precaution, lowers AUC by only 0.014 (0.826 against 0.840 for
 random splitting), whereas holding out source publications gives 0.607; grouping
 near-identical or overlapping peptides changes it by under 0.02, so sequence similarity is
@@ -28,7 +29,7 @@ benchmark, both split schemes, all predictions, and a reporting protocol.
 · label reliability · reproducibility · IEDB
 
 
-^¹Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia. ²University of Toronto, Toronto, Canada. Correspondence to: I Nyoman Agung Ananda Terano (teranoace@gmail.com).
+^¹Department of Information Systems, Faculty of Intelligent Electrical and Informatics Technology, Institut Teknologi Sepuluh Nopember, Kampus ITS Sukolilo, Jl. Raya ITS, Keputih, Surabaya 60111, Indonesia. ²Faculty of Applied Science and Engineering, University of Toronto, Toronto, Ontario M5S 2L6, Canada. Correspondence to: I Nyoman Agung Ananda Terano (teranoace@gmail.com).
 
 ## Highlights
 
@@ -40,17 +41,17 @@ benchmark, both split schemes, all predictions, and a reporting protocol.
 
 ## 1. Introduction
 
-Predictors of which peptide–MHC complexes trigger a CD8⁺ T-cell response are used to
-design neoantigen vaccines and to choose targets for adoptive cell therapy. Personalised
-neoantigen vaccines have reached clinical trials in melanoma and pancreatic cancer
-(Ott et al., 2017; Sahin et al., 2017; Rojas et al., 2023), including a randomised phase 2b
-trial in melanoma (Weber et al., 2024), and which
-candidates are synthesised rests on predictions of this kind. Experimental screening is slow and costly, so predictors trained on IEDB have multiplied,
-and recent ones report ROC-AUC values of 0.85 and above under random cross-validation
-(**Table 1**). Neoantigen pipelines lacked
-reference data for comparison until a consortium experimentally tested 608 predicted
-epitopes (Wells et al., 2020). Two established facts argue against taking
-those numbers at face value.
+Neoantigen vaccines and adoptive cell therapy both depend on knowing which peptide–MHC
+complexes will trigger a CD8⁺ T-cell response. Personalised vaccines have already reached
+clinical trials in melanoma and pancreatic cancer (Ott et al., 2017; Sahin et al., 2017;
+Rojas et al., 2023), among them a randomised phase 2b trial in melanoma (Weber et al., 2024),
+and the choice of which candidates to synthesise rests on predictions of this kind.
+Screening every candidate experimentally is slow and costly, which is why so many
+predictors have been trained on IEDB data. The recent ones report ROC-AUC values of 0.85
+and above under random cross-validation (**Table 1**). Neoantigen pipelines had no common
+reference data to compare against until a consortium experimentally tested 608 predicted
+epitopes (Wells et al., 2020). We think two facts about the task count against those
+headline numbers.
 
 Reported performance tracks the evaluation protocol more closely than it tracks the method
 (**Table 1**). Under random cross-validation on pooled data, reported figures reach 0.85 to
@@ -88,37 +89,39 @@ the cited work; the verbatim source sentence for each is recorded in
 
 
 
-First, peptide and allele do not determine the outcome. A response also depends on the
-individual's T-cell receptor repertoire, prior antigen exposure, the rest of their HLA
-genotype and the tissue context (Lu et al., 2026). Two people with the same restricting allele can respond
-differently to the same peptide, so a model given only a peptide and an allele has a ceiling
-below 1.0 whatever its architecture.
+First, peptide and allele do not settle the outcome. A response also hinges on the person's
+T-cell receptor repertoire, on what antigens they have met before, on the rest of their HLA
+genotype and on the tissue involved (Lu et al., 2026). Two people who share the restricting
+allele can react differently to the same peptide. A model given just a peptide and an allele
+tops out below 1.0, whatever its architecture.
 
-Second, laboratories measure the response inconsistently. International proficiency panels run by the Cancer Vaccine Consortium found that
-laboratories differ substantially on the same material. In two ELISpot panels (36
-laboratories in 2005, 29 in 2006) performance was scored by the ability to detect all
-predefined responses correctly, and it improved significantly in the second panel once
-protocol lessons were applied (Janetzki et al., 2008). A 27-laboratory HLA-peptide multimer panel found
-significant differences across laboratories in both assay performance and the frequencies of
-specific T cells reported (Britten et al., 2009).
+Second, laboratories do not measure the response consistently. The Cancer Vaccine
+Consortium ran international proficiency panels and found that laboratories differ
+substantially when given the same material. Two ELISpot panels (36 laboratories in 2005, 29
+in 2006) scored performance by how well each laboratory detected all predefined responses,
+and results improved significantly in the second panel once the lessons of the first were
+applied (Janetzki et al., 2008). In a 27-laboratory HLA-peptide multimer panel, both assay
+performance and the reported frequencies of specific T cells differed significantly between
+laboratories (Britten et al., 2009).
 
 Harmonisation guidelines aim to reduce this variation in prospective, coordinated studies
-(Janetzki et al., 2008; Britten et al., 2009), but they cannot be applied retroactively to a database that aggregates decades of heterogeneous
-protocols. To our knowledge, what that heterogeneity does to machine-learning benchmarks
-built on IEDB has not been measured. Predictors deal with label disagreement by convention. PredIG, for example, calls a
-peptide–HLA pair positive if any experiment found a responder and discards the conflicting
-negative instances (Farriol-Duran et al., 2025); this is the any-positive rule whose effect on reliability we
-measure in §4.3.
+(Janetzki et al., 2008; Britten et al., 2009). They cannot be applied after the fact to a
+database that pools decades of heterogeneous protocols. To our knowledge, the effect of that
+heterogeneity on machine-learning benchmarks built on IEDB has not been measured. Predictors
+handle disagreeing labels by convention. PredIG, for example, calls a peptide–HLA pair
+positive if any experiment found a responder and discards the conflicting negative instances
+(Farriol-Duran et al., 2025). We measure the effect of this any-positive rule on reliability
+in §4.3.
 
 Related problems have been reported, and study structure in particular is not a new
 observation. Schmidt et al. (2021) noted that "standard cross-validation results can be
 artificially boosted by batch effects because different peptides from the same study are
 found in both the training and testing sets", and validated PRIME with a leave-one-study-out
 scheme over the seven neo-epitope studies that had at least five positives and five
-negatives. Our contribution is not that observation but its scale and consequences: we apply
-study-level grouping across 1,365 publications rather than seven, quantify how much of the
-reported performance it removes, separate it from sequence similarity, and pair it with a
-measurement of what the labels themselves support. Lee et al. documented HLA bias in
+negatives. We contribute the scale and the consequences: we group by study across 1,365
+publications instead of seven, measure how much reported performance that removes, separate
+the effect from sequence similarity, and pair it with a measurement of what the labels
+themselves can support. Lee et al. documented HLA bias in
 immunogenicity predictors and showed that cross-species splits lower performance
 (Lee et al., 2023). Their own benchmark makes the protocol dependence explicit: TRAP scores
 0.931 HLA-agnostic and 0.703 HLA-restrictive as a self-antigen model, and 0.751 against
@@ -126,14 +129,15 @@ immunogenicity predictors and showed that cross-species splits lower performance
 single paper's own numbers (**Table 1**). A benchmark of 50 TCR–epitope predictors found that all of them struggle to generalize to
 unseen epitopes, and cautioned that adding external TCRs as negatives would "introduce
 batch-like confounders, causing models to learn dataset-specific artifacts rather than true
-TCR–epitope binding signals" (Lu et al., 2026). Tools also treat the separation of training from test
-data inconsistently: T-SCAPE excludes fragments with fewer than two mismatches, and notes
-that NetMHCpan removes only exact peptide matches and that BigMHC allows overlapping peptide
-sequences when the allele differs (Kim et al., 2025). Kapoor and Narayanan reviewed 17 scientific fields and found
-leakage affecting 294 papers; in one case study, complex models claimed to beat logistic
-regression stopped doing so once leakage was corrected (Kapoor and Narayanan, 2023).
-Leakage-aware evaluation is an established programme in computational biology rather than a
-concern peculiar to one assay: Bernett et al. (2024) set out guiding questions for avoiding
+TCR–epitope binding signals" (Lu et al., 2026). Tools also separate training from test data
+inconsistently. T-SCAPE drops fragments with fewer than two mismatches. Kim et al. (2025)
+point out that NetMHCpan removes only exact peptide matches, and that BigMHC lets
+overlapping peptide sequences through when the allele differs. Kapoor and Narayanan (2023) reviewed
+17 scientific fields and found leakage affecting 294 papers. In one case study, complex
+models that had been claimed to beat logistic regression stopped doing so once the leakage
+was corrected.
+Leakage-aware evaluation is already an established programme in computational biology, and
+not only for T-cell assays: Bernett et al. (2024) set out guiding questions for avoiding
 it in biological machine learning, and DataSAIL (Joeres et al., 2025) provides general
 machinery for splitting biological datasets so that information does not cross the boundary.
 The same two structural findings we report have been found in a different domain. Mattsson
@@ -169,18 +173,19 @@ contributions are:
 
 ## 2. Scope and definitions
 
-**Scope.** We examine benchmarks for CD8⁺ T-cell epitope immunogenicity built from IEDB
-assay records, where a model receives a peptide and an MHC-I allele and predicts whether a
-T-cell response was observed. We do not examine MHC binding or ligand presentation
-prediction, whose labels come from binding or mass-spectrometry measurements rather than
-from a T-cell assay, and where pan-allele predictors such as NetMHCpan-4.1 and MHCflurry 2.0
-report far higher figures on their own task (Reynisson et al., 2020; O'Donnell et al., 2020). We also leave out patient-specific neoantigen prioritisation pipelines, which use tumour sequencing and RNA
-expression in addition to peptide sequence (Müller et al., 2023); §4.7 shows why conflating the two inflates apparent
-performance.
+**Scope.** This paper covers benchmarks for CD8⁺ T-cell epitope immunogenicity that are
+built from IEDB assay records. A model gets a peptide and an MHC-I allele and predicts
+whether a T-cell response was observed. MHC binding and ligand presentation prediction are
+outside our scope: their labels come from binding or mass-spectrometry measurements, not
+from a T-cell assay, and pan-allele predictors such as NetMHCpan-4.1 and MHCflurry 2.0
+report far higher figures on that task (Reynisson et al., 2020; O'Donnell et al., 2020). We
+also exclude patient-specific neoantigen prioritisation pipelines, which use tumour
+sequencing and RNA expression as well as peptide sequence (Müller et al., 2023). §4.7 shows
+why conflating the two inflates apparent performance.
 
-**Grouping unit.** A split is defined by the unit held out. Splitting *by peptide* means no
-peptide appears in both training and test data; splitting *by study* means no record from a
-given publication appears in both. Leakage here is shared structure: records from one
+**Grouping unit.** A split is defined by the unit held out. In a split *by peptide*, no
+peptide appears in both training and test data. In a split *by study*, no record from the
+same publication appears in both. Leakage here is shared structure: records from one
 publication share a cohort, a protocol and often an outcome, so a model can identify the
 source rather than the biology. We use "grouping unit" throughout to name the choice,
 because it is the choice that determines the reported number (§4.4).
@@ -292,7 +297,7 @@ pairs, 31.7% positive, drawn from 1,365 publications. Its composition is uneven
 of its outcomes is negative; the ten largest studies supply 54% of all pairs and the
 hundred largest 81%. Across all studies, 75% report only one outcome class, and those
 studies account for 57% of the pairs. Study identity is therefore highly informative about
-the label before any peptide is examined, which motivates the analyses that follow.
+the label before any peptide is examined. The analyses below follow from that.
 
 ### 4.2 Immunogenicity labels reproduce poorly between laboratories
 
@@ -312,17 +317,16 @@ over pairs (§3.3).
 | **AUC** | **0.636** (0.617–0.657) |
 
 A κ of 0.273 (Cohen, 1960) denotes fair agreement only on the conventional scale
-(Landis and Koch, 1977). The agreement between two experiments on the same
-pair bounds what can be *measured* against these labels.
+(Landis and Koch, 1977). How well two experiments on the same pair agree sets how much
+can be *measured* against these labels.
 
 We use this figure throughout as an empirical reproducibility reference, not as a
 theoretical cap on prediction. Inter-annotator agreement does not limit what a
 well-specified model can achieve: when annotators carry independent noise, a model can
 exceed their mutual agreement (Richie et al., 2022), and the simulations in that work show
-this explicitly. The claim here is narrower and is about measurement rather than biology —
-a model scored against labels this noisy cannot be *credited* with much more, because the
-labels themselves do not agree on the answer. §5 returns to what this does and does not
-license.
+this explicitly. Our claim concerns measurement only: a model scored against labels this
+noisy cannot be *credited* with much more, because the labels themselves do not agree on the
+answer. §5 returns to what this does and does not license.
 
 ### 4.3 The reliability estimate is robust to how it is measured
 
@@ -379,7 +383,7 @@ by more than 0.2.
 | Peptides sharing a 6-residue stretch | 0.818 | 0.724 | 0.735 | 0.754 |
 | **Source publication** | **0.607** | **0.435** | **0.548** | **0.465** |
 
-**Sequence similarity is not the mechanism.** Holding out peptides within one or two mismatches of each other, or sharing a six-residue stretch (which groups overlapping windows of one source protein), lowers AUC by 0.008 to 0.010 more than exact-peptide grouping (six-residue rule: 0.008, 95% CI 0.005–0.017). Holding out source publications lowers it by a further 0.210. The model is not recognising near-copies of training peptides; it is recognising the study.
+**Sequence similarity is not the mechanism.** Holding out peptides within one or two mismatches of each other, or sharing a six-residue stretch (which groups overlapping windows of one source protein), lowers AUC by 0.008 to 0.010 more than exact-peptide grouping (six-residue rule: 0.008, 95% CI 0.005–0.017). Holding out source publications lowers it by a further 0.210. Near-copies of training peptides explain very little of the result. What the model picks up is the study.
 
 **It is not specific to gradient boosting.** Logistic regression gives the same ordering (0.739 under peptide grouping, 0.548 under source grouping). The allele prior, which sees no peptide, reaches 0.756 under peptide grouping and 0.465 under source grouping. Allele frequency predicts the outcome only because studies differ in which alleles they test and what they find; when studies are held out, the same signal points the wrong way.
 
@@ -414,8 +418,8 @@ allele prior scores 0.500 by construction.
 
 The two DeepImmuno rows are different models and the gap between them is itself a result:
 the published checkpoint scores 0.606, while the same architecture retrained on our
-training split reaches 0.792. The architecture is not what separates them; exposure to
-this dataset's study structure is.
+training split reaches 0.792. The architecture is the same in both, so exposure to this
+dataset's study structure accounts for the difference.
 
 The allele prior is constant within an allele, so its within-allele AUC is 0.500 by
 construction: the entire 0.752 is allele frequency. Holding the allele fixed costs the
@@ -543,8 +547,8 @@ also fitting the noise. Our results place that noise at the level of the study.
 
 **Agreement as a bound.** Agreement between annotators does not cap model performance in
 general. If annotators err independently, a well-specified model can beat their mutual
-agreement (Richie et al., 2022). Our figures therefore describe performance against these labels, not how
-accurate prediction could be in principle. Random label noise would make a high measured
+agreement (Richie et al., 2022). Our figures therefore describe performance against these
+labels only. They say nothing about how accurate prediction could be in principle. Random label noise would make a high measured
 AUC unattainable. High AUCs are attainable here, which indicates that the noise is
 systematic and learnable, as §4.4–4.6 show.
 
@@ -572,10 +576,10 @@ lack, such as HLA presentation hotspots, binding promiscuity and the oncogenic r
 mutated gene (Müller et al., 2023). Methods that add TCR sequence without patient context still struggle to generalize to unseen
 epitopes (Lu et al., 2026), so the limit is not specific to peptide-only models.
 
-Raising the ceiling requires harmonised assays of the kind whose adoption improved
-performance between two successive proficiency panels (Janetzki et al., 2008). Broadening coverage requires more distinct epitopes, currently limited
-by peptide-library production, and patient-specific prediction requires patient-specific
-measurement.
+Raising the ceiling requires harmonised assays, the kind whose adoption improved
+performance between two successive proficiency panels (Janetzki et al., 2008). Coverage
+depends on testing more distinct epitopes, which peptide-library production currently limits.
+Patient-specific prediction needs patient-specific measurement.
 
 ### 5.1 Recommendations
 
